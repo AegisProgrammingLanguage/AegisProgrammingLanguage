@@ -1,5 +1,6 @@
 use crate::ast::{Instruction, Expression, Value};
 use crate::environment::Environment;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::io::{self, Write};
@@ -17,6 +18,7 @@ fn is_truthy(val: &Value) -> bool {
         Value::String(s) => !s.is_empty(),
         Value::List(l) => !l.is_empty(),
         Value::Dict(d) => !d.is_empty(),
+        Value::Instance(_) => true,
     }
 }
 
@@ -115,6 +117,104 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                 (Value::Float(a), Value::Integer(b)) => Ok(Value::Boolean(a < (b as f64))),
                 _ => Err("Comparaison impossible pour ces types".to_string()),
             }
+        },
+
+        Expression::New(class_name, args_exprs) => {
+            // 1. Trouver la classe
+            let cls_def = env.borrow().get_class(class_name)
+                .ok_or_else(|| format!("Classe inconnue : {}", class_name))?;
+            
+            // 2. Évaluer les arguments du constructeur
+            let mut resolved_args = Vec::new();
+            for arg in args_exprs {
+                resolved_args.push(evaluate(arg, env.clone())?);
+            }
+            
+            if resolved_args.len() != cls_def.params.len() {
+                return Err("Nombre d'arguments constructeur incorrect".to_string());
+            }
+
+            // 3. Créer les données de l'instance
+            let mut fields = HashMap::new();
+            for (param_name, val) in cls_def.params.iter().zip(resolved_args) {
+                fields.insert(param_name.clone(), val);
+            }
+
+            // 4. Retourner l'instance wrappée dans Rc<RefCell>
+            let instance_data = crate::ast::InstanceData {
+                class_name: class_name.clone(),
+                fields
+            };
+            Ok(Value::Instance(Rc::new(RefCell::new(instance_data))))
+        },
+
+        Expression::GetAttr(obj_expr, attr_name) => {
+            let obj_val = evaluate(obj_expr, env.clone())?;
+            if let Value::Instance(inst_rc) = obj_val {
+                let inst = inst_rc.borrow();
+                if let Some(val) = inst.fields.get(attr_name) {
+                    return Ok(val.clone());
+                } else {
+                    return Err(format!("Attribut '{}' non trouvé", attr_name));
+                }
+            }
+            Err("GetAttr sur non-instance".to_string())
+        },
+
+        Expression::CallMethod(obj_expr, method_name, args_exprs) => {
+            // 1. Obtenir l'instance (this)
+            let obj_val = evaluate(obj_expr, env.clone())?;
+            
+            // Vérification que c'est bien une instance
+            let (class_name, instance_rc) = match &obj_val {
+                Value::Instance(rc) => (rc.borrow().class_name.clone(), rc.clone()),
+                _ => return Err("CallMethod sur non-instance".to_string()),
+            };
+
+            // 2. Évaluer les arguments
+            let mut resolved_args = Vec::new();
+            for arg in args_exprs {
+                resolved_args.push(evaluate(arg, env.clone())?);
+            }
+
+            // 3. Résolution de méthode (Héritage)
+            let mut current_class_name = Some(class_name);
+            let mut method_found = None;
+
+            while let Some(name) = current_class_name {
+                let cls = env.borrow().get_class(&name)
+                    .ok_or_else(|| format!("Classe corrompue dans l'héritage: {}", name))?;
+                
+                if let Some(method_def) = cls.methods.get(method_name) {
+                    method_found = Some(method_def.clone());
+                    break;
+                }
+                current_class_name = cls.parent.clone();
+            }
+
+            let (params, body) = method_found.ok_or_else(|| format!("Méthode '{}' non trouvée", method_name))?;
+
+            // 4. Préparer l'exécution
+            if resolved_args.len() != params.len() {
+                return Err("Arity mismatch method".to_string());
+            }
+
+            let child_env = Environment::new_child(env.clone());
+            
+            // INJECTION DE 'this'
+            child_env.borrow_mut().set_variable("this".to_string(), Value::Instance(instance_rc));
+
+            for (p, v) in params.iter().zip(resolved_args) {
+                child_env.borrow_mut().set_variable(p.clone(), v);
+            }
+
+            // 5. Exécution
+            for instr in body {
+                if let Some(ret) = execute(&instr, child_env.clone())? {
+                    return Ok(ret);
+                }
+            }
+            Ok(Value::Null)
         },
 
         // --- FONCTIONS ---
@@ -331,6 +431,24 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
             // 4. Stocker dans la variable
             env.borrow_mut().set_variable(var_name.clone(), val);
             Ok(None)
+        },
+
+        Instruction::Class(def) => {
+            env.borrow_mut().define_class(def.clone());
+            Ok(None)
+        },
+
+        Instruction::SetAttr(obj_expr, attr, val_expr) => {
+            let obj_val = evaluate(obj_expr, env.clone())?;
+            let new_val = evaluate(val_expr, env.clone())?;
+            
+            if let Value::Instance(inst_rc) = obj_val {
+                // Ici, on a besoin de la mutabilité intérieure via borrow_mut !
+                inst_rc.borrow_mut().fields.insert(attr.clone(), new_val);
+                Ok(None)
+            } else {
+                Err("SetAttr sur non-instance".to_string())
+            }
         },
     }
 }

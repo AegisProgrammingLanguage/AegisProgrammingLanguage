@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use crate::ast::{Instruction, Value};
+use crate::ast::{ClassDefinition, Instruction, Value};
 
 type SharedEnv = Rc<RefCell<Environment>>;
 
@@ -15,7 +15,8 @@ pub struct FuncDef {
 pub struct Environment {
     parent: Option<SharedEnv>,
     variables: HashMap<String, Value>,
-    functions: HashMap<String, FuncDef>
+    functions: HashMap<String, FuncDef>,
+    classes: HashMap<String, ClassDefinition>
 }
 
 #[allow(dead_code)]
@@ -24,7 +25,8 @@ impl Environment {
         Rc::new(RefCell::new(Environment {
             parent: None,
             variables: HashMap::new(),
-            functions: HashMap::new()
+            functions: HashMap::new(),
+            classes: HashMap::new()
         }))
     }
 
@@ -32,7 +34,8 @@ impl Environment {
         Rc::new(RefCell::new(Environment {
             parent: Some(parent),
             variables: HashMap::new(),
-            functions: HashMap::new()
+            functions: HashMap::new(),
+            classes: HashMap::new()
         }))
     }
 
@@ -71,6 +74,20 @@ impl Environment {
             return parent.borrow().get_function(name);
         }
 
+        None
+    }
+
+    pub fn define_class(&mut self, def: ClassDefinition) {
+        self.classes.insert(def.name.clone(), def);
+    }
+
+    pub fn get_class(&self, name: &str) -> Option<ClassDefinition> {
+        if let Some(cls) = self.classes.get(name) {
+            return Some(cls.clone());
+        }
+        if let Some(parent) = &self.parent {
+            return parent.borrow().get_class(name);
+        }
         None
     }
 }

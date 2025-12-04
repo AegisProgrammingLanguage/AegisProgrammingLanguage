@@ -220,6 +220,19 @@ impl Parser {
         }
     }
 
+    fn parse_params_list(&mut self) -> Result<Value, String> {
+        self.consume(Token::LParen, "Expect '('")?;
+        let mut params = Vec::new();
+        if !self.check(&Token::RParen) {
+            loop {
+                if let Token::Identifier(p) = self.advance() { params.push(p.clone()); }
+                if !self.match_token(Token::Comma) { break; }
+            }
+        }
+        self.consume(Token::RParen, "Expect ')'")?;
+        Ok(json!(params))
+    }
+
     // --- Statements ---
 
     fn parse_statement(&mut self) -> Result<Value, String> {
@@ -228,24 +241,49 @@ impl Parser {
             Token::Print => self.parse_print(),
             Token::If => self.parse_if(),
             Token::While => self.parse_while(),
+            Token::For => self.parse_for(),
             Token::Func => self.parse_func(),
+            Token::Class => self.parse_class(),
             Token::Return => self.parse_return(),
             Token::Input => self.parse_input(),
             Token::Break => { self.advance(); Ok(json!(["break"])) },
-            Token::For => self.parse_for(),
             
-            // Gestion des assignations ou appels isolés
+            // Cas générique pour Identifiants (Variables, Appels, Attributs)
             Token::Identifier(_) => {
-                // Lookahead pour voir si c'est une assignation
-                if self.pos + 1 < self.tokens.len() && self.tokens[self.pos + 1] == Token::Eq {
-                    let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { unreachable!() };
-                    self.advance(); // Eat '='
-                    let expr = self.parse_expression()?;
-                    Ok(json!(["set", name, expr]))
-                } else {
-                    self.parse_expression()
+                // 1. On parse l'expression complète (ex: "x", "this.nom", "obj.method()")
+                // Cela consomme les tokens correctement, y compris les points.
+                let expr = self.parse_expression()?;
+                
+                // 2. On regarde si c'est suivi d'un signe égal "=" (Assignation)
+                if self.match_token(Token::Eq) {
+                    let value = self.parse_expression()?;
+                    
+                    // 3. On transforme l'expression de lecture en instruction d'écriture
+                    // On inspecte le JSON généré par parse_expression
+                    if let Some(arr) = expr.as_array() {
+                        let cmd = arr[0].as_str().unwrap_or("");
+                        
+                        // Cas 1: Variable simple ["get", "x"] -> ["set", "x", val]
+                        if cmd == "get" {
+                            let name = &arr[1];
+                            return Ok(json!(["set", name, value]));
+                        }
+                        
+                        // Cas 2: Attribut ["get_attr", obj, "attr"] -> ["set_attr", obj, "attr", val]
+                        if cmd == "get_attr" {
+                            let obj = &arr[1];
+                            let attr = &arr[2];
+                            return Ok(json!(["set_attr", obj, attr, value]));
+                        }
+                    }
+                    
+                    return Err("Cible d'assignation invalide (doit être une variable ou un attribut)".to_string());
                 }
+                
+                // Si pas de "=", c'était juste une expression (ex: appel de fonction)
+                Ok(expr)
             },
+            
             _ => Err(format!("Unexpected token at start of statement: {:?}", self.peek())),
         }
     }
@@ -353,6 +391,38 @@ impl Parser {
         Ok(json!(["for_range", var_name, start, end, step, body]))
     }
 
+    fn parse_class(&mut self) -> Result<Value, String> {
+        self.advance(); // Eat 'class'
+        let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect class name".into()); };
+        
+        let params = self.parse_params_list()?;
+        
+        let mut parent = Value::Null;
+        if self.match_token(Token::Extends) {
+            if let Token::Identifier(n) = self.advance() { parent = json!(n); }
+        }
+
+        self.consume(Token::LBrace, "{")?;
+        let mut methods = serde_json::Map::new();
+        
+        while !self.check(&Token::RBrace) && !self.is_at_end() {
+            // Method definition: name(params) { body }
+            let m_name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect method name".into()); };
+            let m_params = self.parse_params_list()?;
+            let m_body = self.parse_block()?;
+            
+            // Format for AST: [params, body]
+            methods.insert(m_name, json!([m_params, m_body]));
+        }
+        self.consume(Token::RBrace, "}")?;
+
+        if parent.is_null() {
+            Ok(json!(["class", name, params, methods]))
+        } else {
+            Ok(json!(["class", name, params, methods, parent]))
+        }
+    }
+
     fn parse_return(&mut self) -> Result<Value, String> {
         self.advance();
         let expr = self.parse_expression()?;
@@ -433,10 +503,9 @@ impl Parser {
             Token::Number(n) => { let v = *n; self.advance(); Ok(json!(v)) },
             Token::StringLiteral(s) => { let v = s.clone(); self.advance(); Ok(json!(v)) },
             Token::LBracket => {
-                self.advance(); // Mange le '['
+                self.advance(); // Eat '['
                 let mut elements = Vec::new();
                 
-                // Si la liste n'est pas vide (pas ']')
                 if !self.check(&Token::RBracket) {
                     loop {
                         elements.push(self.parse_expression()?);
@@ -445,16 +514,41 @@ impl Parser {
                 }
                 
                 self.consume(Token::RBracket, "Expect ']' after list")?;
-                
-                // Retourne un tableau JSON valide
                 Ok(json!(elements))
+            },
+            Token::New => {
+                self.advance(); // Mange le mot-clé 'new'
+                
+                // 1. On attend le nom de la classe (Identifier)
+                let class_name = if let Token::Identifier(n) = self.advance() {
+                    n.clone()
+                } else {
+                    return Err("Expect class name after 'new'".to_string());
+                };
+
+                // 2. On attend les parenthèses et les arguments
+                self.consume(Token::LParen, "Expect '(' after class name")?;
+                let mut args = Vec::new();
+                if !self.check(&Token::RParen) {
+                    loop {
+                        args.push(self.parse_expression()?);
+                        if !self.match_token(Token::Comma) { break; }
+                    }
+                }
+                self.consume(Token::RParen, "Expect ')' after arguments")?;
+
+                // 3. On construit l'AST JSON: ["new", "ClassName", arg1, arg2...]
+                let mut new_expr = vec![json!("new"), json!(class_name)];
+                new_expr.extend(args);
+                Ok(json!(new_expr))
             },
             Token::Identifier(name) => {
                 let name = name.clone();
-                self.advance();
+                self.advance(); // Consume the identifier (e.g., "x", "this", "console")
                 
-                // Appel de fonction ?
-                if self.match_token(Token::LParen) {
+                // 1. Initial Expression: Is it a variable or a direct function call?
+                let mut expr = if self.match_token(Token::LParen) {
+                    // It's a function call: func(...)
                     let mut args = Vec::new();
                     if !self.check(&Token::RParen) {
                         loop {
@@ -464,20 +558,54 @@ impl Parser {
                     }
                     self.consume(Token::RParen, "Expect ')'")?;
                     
-                    // Liste Blanche Native (très important !)
+                    // Native Allowlist logic
                     let native_commands = vec!["to_int", "len", "str"];
                     if native_commands.contains(&name.as_str()) {
                         let mut call = vec![json!(name)];
                         call.extend(args);
-                        Ok(json!(call))
+                        json!(call)
                     } else {
                         let mut call = vec![json!("call"), json!(name)];
                         call.extend(args);
-                        Ok(json!(call))
+                        json!(call)
                     }
                 } else {
-                    Ok(json!(["get", name]))
+                    // It's a simple variable access: var
+                    json!(["get", name])
+                };
+
+                // 2. Member Access Loop: Handle chains like `obj.prop` or `obj.method()`
+                while self.match_token(Token::Dot) {
+                    // We found a dot, we expect a property name next
+                    let member_name = if let Token::Identifier(n) = self.advance() {
+                        n.clone()
+                    } else {
+                        return Err("Expect property name after '.'".to_string());
+                    };
+
+                    if self.match_token(Token::LParen) {
+                        // It is a method call: obj.method(...)
+                        let mut args = Vec::new();
+                        if !self.check(&Token::RParen) {
+                            loop {
+                                args.push(self.parse_expression()?);
+                                if !self.match_token(Token::Comma) { break; }
+                            }
+                        }
+                        self.consume(Token::RParen, "Expect ')'")?;
+
+                        // Construct AST for CallMethod: ["call_method", obj_expr, "method_name", arg1, arg2...]
+                        let mut call = vec![json!("call_method"), expr, json!(member_name)];
+                        call.extend(args);
+                        expr = json!(call);
+                    } else {
+                        // It is a property access: obj.field
+                        // Construct AST for GetAttr: ["get_attr", obj_expr, "field_name"]
+                        expr = json!(["get_attr", expr, member_name]);
+                    }
                 }
+
+                Ok(expr)
             },
             Token::LParen => {
                 self.advance();

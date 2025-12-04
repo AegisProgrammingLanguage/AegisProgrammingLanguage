@@ -106,6 +106,35 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     }
                     return Ok(Expression::FunctionCall(func_name.to_string(), args));
                 },
+                "new" => {
+                    // ["new", "ClassName", arg1, arg2...]
+                    let class_name = array.get(1).and_then(|v| v.as_str()).ok_or("New attend un nom de classe")?.to_string();
+                    let args_json = &array[2..];
+                    let mut args = Vec::new();
+                    for arg in args_json {
+                        args.push(parse_expression(arg)?);
+                    }
+                    return Ok(Expression::New(class_name, args));
+                },
+                
+                // Gestion de "get_attr" (obj.attr)
+                "get_attr" => {
+                    let obj = parse_expression(&array[1])?;
+                    let attr = array.get(2).and_then(|v| v.as_str()).ok_or("Attr attend un nom")?.to_string();
+                    return Ok(Expression::GetAttr(Box::new(obj), attr));
+                },
+
+                // Gestion de "call_method" (obj.method())
+                "call_method" => {
+                    let obj = parse_expression(&array[1])?;
+                    let method = array.get(2).and_then(|v| v.as_str()).ok_or("Method attend un nom")?.to_string();
+                    let args_json = &array[3..];
+                    let mut args = Vec::new();
+                    for arg in args_json {
+                        args.push(parse_expression(arg)?);
+                    }
+                    return Ok(Expression::CallMethod(Box::new(obj), method, args));
+                },
                 cmd_name => {
                     // Vérification : est-ce que c'est vraiment une fonction ou juste une liste de données ?
                     // Dans notre architecture, tout ce qui commence par une string dans un tableau
@@ -199,6 +228,13 @@ pub fn parse_instruction(json_instr: &JsonValue) -> Result<Instruction, String> 
             let expr = parse_expression(json_instr)?;
             Ok(Instruction::ExpressionStatement(expr))
         },
+        "call_method" => {
+            // ["call_method", obj, "method", args...]
+            // On délègue le parsing à parse_expression qui sait gérer "call_method"
+            // Et on l'enveloppe dans une Instruction (pour l'exécuter sans attendre de retour)
+            let expr = parse_expression(json_instr)?;
+            Ok(Instruction::ExpressionStatement(expr))
+        },
         "function" => {
             // ["function", "name", ["arg1"], [body]]
             let name = array[1].as_str().ok_or("Nom de fonction invalide")?.to_string();
@@ -224,6 +260,42 @@ pub fn parse_instruction(json_instr: &JsonValue) -> Result<Instruction, String> 
             let prompt = parse_expression(&array[2])?;
             
             Ok(Instruction::Input(var_name, prompt))
+        },
+        "class" => {
+            // ["class", "Name", [params], {methods}, "Parent"?]
+            let name = array[1].as_str().ok_or("Nom classe")?.to_string();
+            
+            // Params
+            let params_arr = array[2].as_array().ok_or("Params array")?;
+            let params: Vec<String> = params_arr.iter().map(|v| v.as_str().unwrap().to_string()).collect();
+            
+            // Methods: Un objet JSON où chaque clé est le nom, et la valeur est [params, body]
+            let methods_map = array[3].as_object().ok_or("Methods object")?;
+            let mut methods = HashMap::new();
+            
+            for (m_name, m_data) in methods_map {
+                let m_arr = m_data.as_array().ok_or("Method data array")?;
+                let m_params: Vec<String> = m_arr[0].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+                let m_body = parse_block(&m_arr[1])?;
+                methods.insert(m_name.clone(), (m_params, m_body));
+            }
+            
+            // Parent (Optionnel)
+            let parent = if array.len() > 4 {
+                array[4].as_str().map(|s| s.to_string())
+            } else {
+                None
+            };
+
+            Ok(Instruction::Class(crate::ast::ClassDefinition { name, parent, params, methods }))
+        },
+        
+        "set_attr" => {
+            // ["set_attr", obj, "attr", value]
+            let obj = parse_expression(&array[1])?;
+            let attr = array[2].as_str().ok_or("Attr name")?.to_string();
+            let val = parse_expression(&array[3])?;
+            Ok(Instruction::SetAttr(Box::new(obj), attr, val))
         },
         _ => Err(format!("Instruction inconnue: {}", command)),
     }

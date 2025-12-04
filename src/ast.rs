@@ -1,5 +1,21 @@
 use std::fmt;
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClassDefinition {
+    pub name: String,
+    pub parent: Option<String>,
+    pub params: Vec<String>,
+    pub methods: HashMap<String, (Vec<String>, Vec<Instruction>)>
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct InstanceData {
+    pub class_name: String,
+    pub fields: HashMap<String, Value>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -9,6 +25,7 @@ pub enum Value {
     Boolean(bool),
     List(Vec<Value>),
     Dict(HashMap<String, Value>),
+    Instance(Rc<RefCell<InstanceData>>),
     Null
 }
 
@@ -35,12 +52,16 @@ impl fmt::Display for Value {
                     write!(f, "{}: {}", k, v)?;
                 }
                 write!(f, "}}")
+            },
+            Value::Instance(inst) => {
+                let data = inst.borrow();
+                write!(f, "<Instance of {}>", data.class_name)
             }
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Value),
     Variable(String),
@@ -51,9 +72,12 @@ pub enum Expression {
     FunctionCall(String, Vec<Expression>),
     Equal(Box<Expression>, Box<Expression>),
     LessThan(Box<Expression>, Box<Expression>),
+    New(String, Vec<Expression>), // new Class(args)
+    GetAttr(Box<Expression>, String), // obj.attr
+    CallMethod(Box<Expression>, String, Vec<Expression>), // obj.method(args)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     Set(String, Expression),
     Print(Expression),
@@ -82,4 +106,6 @@ pub enum Instruction {
     },
     // ["input", "var_name", "Prompt text"]
     Input(String, Expression),
+    Class(ClassDefinition),
+    SetAttr(Box<Expression>, String, Expression), // obj.attr = val
 }
