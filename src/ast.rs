@@ -75,6 +75,8 @@ pub enum Expression {
     New(String, Vec<Expression>), // new Class(args)
     GetAttr(Box<Expression>, String), // obj.attr
     CallMethod(Box<Expression>, String, Vec<Expression>), // obj.method(args)
+    List(Vec<Expression>), // [expr, expr]
+    Dict(Vec<(String, Expression)>), // { key: expr, key: expr }
 }
 
 #[derive(Debug, Clone, PartialEq)]

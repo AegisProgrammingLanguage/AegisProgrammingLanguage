@@ -1,0 +1,11 @@
+var x = 10
+var ma_liste = [x, x * 2, 30] // [10, 20, 30]
+
+var mon_dict = {
+    nom: "Aegis",
+    version: 1.5,
+    liste_interne: ma_liste
+}
+
+print "Liste: " + ma_liste
+print "Dict version: " + mon_dict

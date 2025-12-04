@@ -11,7 +11,8 @@ pub enum Token {
     // Identifiants et Littéraux
     Identifier(String),
     StringLiteral(String),
-    Number(i64),
+    Integer(i64),
+    Float(f64),
     // Symboles
     Plus, Minus, Star, Slash, Percent,
     Eq, EqEq, Neq, Lt, Gt, LtEq, GtEq,
@@ -120,14 +121,29 @@ impl<'a> Lexer<'a> {
 
     fn read_number(&mut self) -> Token {
         let mut s = String::new();
+        let mut has_dot = false;
+
         while let Some(&c) = self.chars.peek() {
             if c.is_digit(10) {
+                s.push(self.chars.next().unwrap());
+            } else if c == '.' && !has_dot {
+                // On a trouvé un point, on vérifie si c'est suivi d'un chiffre
+                // pour être sûr que ce n'est pas un accès de méthode (ex: 1.to_int())
+                // Pour simplifier ici : si on voit un point dans un nombre, on le mange.
+                has_dot = true;
                 s.push(self.chars.next().unwrap());
             } else {
                 break;
             }
         }
-        Token::Number(s.parse().unwrap())
+
+        if has_dot {
+            // C'est un float
+            Token::Float(s.parse().unwrap())
+        } else {
+            // C'est un entier
+            Token::Integer(s.parse().unwrap())
+        }
     }
 
     fn read_identifier(&mut self) -> Token {
@@ -500,10 +516,11 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<Value, String> {
         match self.peek() {
-            Token::Number(n) => { let v = *n; self.advance(); Ok(json!(v)) },
+            Token::Integer(n) => { let v = *n; self.advance(); Ok(json!(v)) },
+            Token::Float(f) => { let v = *f; self.advance(); Ok(json!(v)) },
             Token::StringLiteral(s) => { let v = s.clone(); self.advance(); Ok(json!(v)) },
             Token::LBracket => {
-                self.advance(); // Eat '['
+                self.advance(); // Mange le '['
                 let mut elements = Vec::new();
                 
                 if !self.check(&Token::RBracket) {
@@ -514,7 +531,41 @@ impl Parser {
                 }
                 
                 self.consume(Token::RBracket, "Expect ']' after list")?;
-                Ok(json!(elements))
+                
+                // IMPORTANT : On utilise un mot-clé spécial pour le runtime
+                let mut ast = vec![json!("make_list")];
+                ast.extend(elements);
+                Ok(json!(ast))
+            },
+
+            Token::LBrace => {
+                self.advance(); // Mange le '{'
+                let mut entries = Vec::new(); // Sera une liste de paires [key, value]
+                
+                if !self.check(&Token::RBrace) {
+                    loop {
+                        // Clé (String ou Identifiant)
+                        let key = match self.advance() {
+                            Token::StringLiteral(s) => s.clone(),
+                            Token::Identifier(s) => s.clone(),
+                            _ => return Err("Dict key must be string or identifier".into())
+                        };
+                        
+                        self.consume(Token::Colon, "Expect ':' after dict key")?;
+                        let value = self.parse_expression()?;
+                        
+                        entries.push(json!([key, value])); // On stocke la paire
+                        
+                        if !self.match_token(Token::Comma) { break; }
+                    }
+                }
+                
+                self.consume(Token::RBrace, "Expect '}' after dict")?;
+                
+                // Structure JSON intermédiaire : ["make_dict", [k, v], [k, v]...]
+                let mut ast = vec![json!("make_dict")];
+                ast.extend(entries);
+                Ok(json!(ast))
             },
             Token::New => {
                 self.advance(); // Mange le mot-clé 'new'

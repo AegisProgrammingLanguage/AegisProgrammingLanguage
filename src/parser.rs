@@ -135,6 +135,27 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     }
                     return Ok(Expression::CallMethod(Box::new(obj), method, args));
                 },
+                "make_list" => {
+                    // ["make_list", expr1, expr2...]
+                    let args_json = &array[1..];
+                    let mut items = Vec::new();
+                    for arg in args_json {
+                        items.push(parse_expression(arg)?);
+                    }
+                    return Ok(Expression::List(items));
+                },
+                "make_dict" => {
+                    // ["make_dict", [k, v], [k, v]...]
+                    let args_json = &array[1..];
+                    let mut entries = Vec::new();
+                    for entry in args_json {
+                        let entry_arr = entry.as_array().ok_or("Dict entry must be array")?;
+                        let key = entry_arr[0].as_str().ok_or("Key must be string")?.to_string();
+                        let val = parse_expression(&entry_arr[1])?;
+                        entries.push((key, val));
+                    }
+                    return Ok(Expression::Dict(entries));
+                },
                 cmd_name => {
                     // Vérification : est-ce que c'est vraiment une fonction ou juste une liste de données ?
                     // Dans notre architecture, tout ce qui commence par une string dans un tableau

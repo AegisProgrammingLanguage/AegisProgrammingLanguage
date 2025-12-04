@@ -301,6 +301,22 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                 }
             }
         },
+        Expression::List(exprs) => {
+            let mut values = Vec::new();
+            for e in exprs {
+                values.push(evaluate(e, env.clone())?);
+            }
+            Ok(Value::List(values))
+        },
+
+        Expression::Dict(entries) => {
+            let mut dict = HashMap::new();
+            for (key, expr) in entries {
+                let val = evaluate(expr, env.clone())?;
+                dict.insert(key.clone(), val);
+            }
+            Ok(Value::Dict(dict))
+        },
     }
 }
 
