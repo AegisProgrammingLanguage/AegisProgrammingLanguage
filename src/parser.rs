@@ -125,6 +125,11 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     let right = parse_expression(&array[2])?;
                     return Ok(Expression::Div(Box::new(left), Box::new(right)));
                 },
+                "%" => {
+                    let left = parse_expression(&array[1])?;
+                    let right = parse_expression(&array[2])?;
+                    return Ok(Expression::Modulo(Box::new(left), Box::new(right)));
+                }
 
                 // Variables et Appels
                 "get" => {
@@ -354,6 +359,14 @@ pub fn parse_instruction(json_instr: &JsonValue) -> Result<Instruction, String> 
             let attr = array[2].as_str().ok_or("Attr name")?.to_string();
             let val = parse_expression(&array[3])?;
             Ok(Instruction::SetAttr(Box::new(obj), attr, val))
+        },
+        "import" => {
+            // ["import", "filename"]
+            let path = array.get(1)
+                .and_then(|v| v.as_str())
+                .ok_or("Import expects a file path string")?
+                .to_string();
+            Ok(Instruction::Import(path))
         },
         _ => Err(format!("Instruction inconnue: {}", command)),
     }

@@ -283,6 +283,7 @@ impl Parser {
             Token::Return => self.parse_return(),
             Token::Input => self.parse_input(),
             Token::Break => { self.advance(); Ok(json!(["break"])) },
+            Token::Import => self.parse_import(),
             
             // Cas générique pour Identifiants (Variables, Appels, Attributs)
             Token::Identifier(_) => {
@@ -357,6 +358,19 @@ impl Parser {
         let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect var name".into()); };
         let prompt = self.parse_expression()?;
         Ok(json!(["input", name, prompt]))
+    }
+
+    fn parse_import(&mut self) -> Result<Value, String> {
+        self.advance(); // Eat 'import' keyword
+
+        // We expect a StringLiteral containing the file path
+        let path = match self.advance() {
+            Token::StringLiteral(s) => s.clone(),
+            _ => return Err("Expect file path (string) after 'import'".into()),
+        };
+
+        // Output JSON: ["import", "path/to/file.ext"]
+        Ok(json!(["import", path]))
     }
 
     fn parse_if(&mut self) -> Result<Value, String> {
@@ -555,17 +569,38 @@ impl Parser {
     }
 
     fn parse_multiplicative(&mut self) -> Result<Value, String> {
-        let mut left = self.parse_primary()?;
-        while let Token::Star | Token::Slash = self.peek() {
+        let mut left = self.parse_unary()?;
+        while let Token::Star | Token::Slash  | Token::Percent = self.peek() {
             let op = match self.advance() {
                 Token::Star => "*",
                 Token::Slash => "/",
+                Token::Percent => "%",
                 _ => unreachable!()
             };
-            let right = self.parse_primary()?;
+            let right = self.parse_unary()?;
             left = json!([op, left, right]);
         }
         Ok(left)
+    }
+
+    fn parse_unary(&mut self) -> Result<Value, String> {
+        if self.match_token(Token::Bang) {
+            let right = self.parse_unary()?;
+            return Ok(json!(["!", right]));
+        }
+
+        if self.match_token(Token::Minus) {
+            // On a trouvé un '-' unaire (ex: -5 ou -x)
+            // On parse récursivement ce qui suit (pour gérer --5 par exemple)
+            let right = self.parse_unary()?;
+            
+            // ASTuce : On transforme "-x" en "0 - x"
+            // Comme ça, l'interpréteur utilise la soustraction qu'il connait déjà.
+            return Ok(json!(["-", json!(0), right]));
+        }
+
+        // Si ce n'est pas un opérateur unaire, c'est une expression primaire standard
+        self.parse_primary()
     }
 
     fn parse_primary(&mut self) -> Result<Value, String> {

@@ -87,10 +87,11 @@ pub enum Expression {
     Variable(String),
 
     // Arithmétique
-    Add(Box<Expression>, Box<Expression>), // +
-    Sub(Box<Expression>, Box<Expression>), // -
-    Mul(Box<Expression>, Box<Expression>), // *
-    Div(Box<Expression>, Box<Expression>), // /
+    Add(Box<Expression>, Box<Expression>),    // +
+    Sub(Box<Expression>, Box<Expression>),    // -
+    Mul(Box<Expression>, Box<Expression>),    // *
+    Div(Box<Expression>, Box<Expression>),    // /
+    Modulo(Box<Expression>, Box<Expression>), // %
 
     // Comparaisons Complètes
     Equal(Box<Expression>, Box<Expression>),        // ==
@@ -144,4 +145,5 @@ pub enum Instruction {
     Input(String, Expression),
     Class(ClassDefinition),
     SetAttr(Box<Expression>, String, Expression), // obj.attr = val
+    Import(String),
 }

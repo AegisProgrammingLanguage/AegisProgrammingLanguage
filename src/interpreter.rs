@@ -1,6 +1,9 @@
 use crate::ast::{Instruction, Expression, Value};
+use crate::compiler;
 use crate::environment::Environment;
+use crate::parser::parse_block;
 use std::collections::HashMap;
+use std::fs;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::io::{self, Write};
@@ -70,7 +73,26 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
             }
         },
 
-        // --- LOGIQUE (NOUVEAU) ---
+        Expression::Modulo(left, right) => {
+             match (evaluate(left, env.clone())?, evaluate(right, env.clone())?) {
+                (Value::Integer(a), Value::Integer(b)) => {
+                    if b == 0 { Err("Modulo by 0".into()) } else { Ok(Value::Integer(a % b)) }
+                },
+                (Value::Float(a), Value::Float(b)) => {
+                     if b == 0.0 { Err("Modulo by 0.0".into()) } else { Ok(Value::Float(a % b)) }
+                },
+                // Rust allows float % int, so let's handle mixed types
+                (Value::Integer(a), Value::Float(b)) => {
+                     if b == 0.0 { Err("Modulo by 0.0".into()) } else { Ok(Value::Float((a as f64) % b)) }
+                },
+                (Value::Float(a), Value::Integer(b)) => {
+                     if b == 0 { Err("Modulo by 0".into()) } else { Ok(Value::Float(a % (b as f64))) }
+                },
+                _ => Err("Types incompatibles pour %".into()),
+            }
+        },
+
+        // --- LOGIQUE ---
         Expression::Not(expr) => {
             let val = evaluate(expr, env)?;
             Ok(Value::Boolean(!is_truthy(&val)))
@@ -359,6 +381,34 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
             } else {
                 Err("SetAttr sur non-instance".to_string())
             }
+        },
+
+        Instruction::Import(path) => {
+            // 1. Read the file content
+            let source_code = fs::read_to_string(path)
+                .map_err(|e| format!("Failed to read file '{}': {}", path, e))?;
+
+            // 2. Compile the source code using the existing compiler logic
+            // We get a JSON Value (AST) back
+            let ast_json = compiler::compile(&source_code)?;
+
+            // 3. Parse the JSON AST into executable Instructions
+            let instructions = parse_block(&ast_json)?;
+
+            // 4. Execute the new instructions in the CURRENT environment.
+            // This acts like an "include", meaning variables/functions defined 
+            // in the imported file are added to the current scope.
+            for i in instructions {
+                // We ignore return values from top-level imports usually, 
+                // but we propagate errors.
+                if let Some(ret) = execute(&i, env.clone())? {
+                    // If an import contains a return at top level, it stops the import execution
+                    // logic here depends on desired behavior. Usually imports don't return values.
+                    return Ok(Some(ret)); 
+                }
+            }
+
+            Ok(None)
         },
     }
 }
