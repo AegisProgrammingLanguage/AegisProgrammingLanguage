@@ -1,0 +1,84 @@
+// ==========================================
+//    SUITE DE TESTS - AEGIS (RUST ENGINE)
+// ==========================================
+
+print "--- 1. VARIABLES & MATHS ---"
+var a = 10
+var b = 20
+// Test de priorité : la multiplication doit passer avant l'addition
+// 10 + (20 * 2) = 50
+var res = a + b * 2 
+print "10 + 20 * 2 = " + res
+
+// Test de concaténation (Polymorphisme du + implémenté en Rust)
+print "Resultat concatene : " + res
+
+
+print ""
+print "--- 2. LOGIQUE & CONDITIONS ---"
+
+if (res == 50) {
+    print "✅ Calcul correct (50)"
+} else {
+    print "❌ Erreur de calcul"
+}
+
+var x = 5
+if (x < 10) {
+    print "x est petit (OK)"
+}
+
+
+print ""
+print "--- 3. BOUCLES ---"
+
+print "While Loop (0 to 2):"
+var i = 0
+while (i < 3) {
+    print "  i = " + i
+    var i = i + 1
+}
+
+print "For Range Loop (0, 10, step 2):"
+// Syntaxe spécifique Rust implémentée : for (var, start, end, step)
+for (j, 0, 10, 2) {
+    print "  j = " + j
+}
+
+
+print ""
+print "--- 4. FONCTIONS & RECURSIVITE ---"
+
+func carre(val) {
+    return val * val
+}
+print "Carre de 5 : " + carre(5)
+
+// Le test ultime pour la stack Rust : la factorielle
+func fact(n) {
+    if (n < 2) { 
+        return 1 
+    }
+    return n * fact(n - 1)
+}
+print "Factorielle de 5 : " + fact(5)
+
+
+print ""
+print "--- 5. LISTES ---"
+// Le parser Rust gère les crochets [ ]
+var list = [10, 20, 30, 40]
+print "Liste : " + list
+print "Taille de la liste : " + len(list)
+
+
+print ""
+print "--- 6. INTERACTIVITE ---"
+// Test de l'input et du parsing (to_int)
+input age_str "Quel age avez-vous ? "
+var age = to_int(age_str)
+var annee = 2025 - age
+print "Vous etes ne en : " + annee
+
+print ""
+print "=== FIN DES TESTS ==="

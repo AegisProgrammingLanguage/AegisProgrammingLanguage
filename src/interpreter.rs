@@ -143,6 +143,32 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                     if resolved_args.len() != 1 { return Err("str() attend 1 argument".to_string()); }
                     Ok(Value::String(format!("{}", resolved_args[0])))
                 },
+                "to_int" => {
+                    if resolved_args.len() != 1 { return Err("to_int() attend 1 argument".to_string()); }
+                    match &resolved_args[0] {
+                        Value::String(s) => {
+                            let i = s.trim().parse::<i64>().map_err(|_| "Conversion impossible".to_string())?;
+                            Ok(Value::Integer(i))
+                        },
+                        Value::Float(f) => Ok(Value::Integer(*f as i64)),
+                        Value::Integer(i) => Ok(Value::Integer(*i)),
+                        _ => Err("Type incompatible pour to_int".to_string()),
+                    }
+                },
+                "at" => {
+                    if resolved_args.len() != 2 { return Err("at() attend 2 arguments".to_string()); }
+                    let index = match resolved_args[1] {
+                        Value::Integer(i) => i as usize,
+                        _ => return Err("Index doit être entier".to_string()),
+                    };
+                    match &resolved_args[0] {
+                        Value::List(l) => {
+                            if index >= l.len() { return Err("Index hors limites".to_string()); }
+                            Ok(l[index].clone())
+                        },
+                        _ => Err("at() supporte uniquement les listes pour l'instant".to_string()),
+                    }
+                },
                 // Fonction utilisateur
                 _ => {
                     let func_def_opt = env.borrow().get_function(name);

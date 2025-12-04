@@ -106,11 +106,20 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     }
                     return Ok(Expression::FunctionCall(func_name.to_string(), args));
                 },
-                // Si ce n'est pas une commande connue, c'est peut-être une liste littérale ["a", "b"]
-                _ => {
-                    // Fallback: Traiter comme une valeur littérale (Liste)
-                    let val = json_to_value(json_expr)?;
-                    return Ok(Expression::Literal(val));
+                cmd_name => {
+                    // Vérification : est-ce que c'est vraiment une fonction ou juste une liste de données ?
+                    // Dans notre architecture, tout ce qui commence par une string dans un tableau
+                    // est potentiellement du code.
+                    
+                    // On construit les arguments (tout ce qui est après l'index 0)
+                    let args_json = &array[1..];
+                    let mut args = Vec::new();
+                    for arg in args_json {
+                        args.push(parse_expression(arg)?);
+                    }
+                    
+                    // On génère un FunctionCall
+                    return Ok(Expression::FunctionCall(cmd_name.to_string(), args));
                 }
             }
         }

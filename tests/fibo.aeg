@@ -1,0 +1,14 @@
+print "--- BENCHMARK FIBONACCI (Rec) ---"
+
+func fib(n) {
+    if (n < 2) { return n }
+    return fib(n - 1) + fib(n - 2)
+}
+
+// Faisons chauffer le CPU
+// 25 est un bon chiffre : ça fait 121,393 appels de fonction récursifs !
+var target = 25 
+
+print "Calcul de fib(" + target + ")..."
+var res = fib(target)
+print "Resultat : " + res

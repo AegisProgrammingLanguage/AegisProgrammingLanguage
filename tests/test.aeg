@@ -1,0 +1,11 @@
+func carre(x) {
+    return x * x
+}
+
+var a = 10
+var res = carre(a)
+print "Le carre de 10 est " + res
+
+if (res > 50) {
+    print "C'est grand !"
+}
