@@ -1,0 +1,47 @@
+import "stdlib/time.aeg"
+import "stdlib/random.aeg"
+
+print "=== JEU DU PLUS OU MOINS ==="
+print "Je pense à un nombre entre 1 et 100."
+
+var secret = Random.int(1, 101) // 1 à 100
+var essais = 0
+var trouve = false
+var start_time = Time.now()
+
+while (!trouve) {
+    input guess_str "Votre proposition : "
+    var guess = to_int(guess_str)
+    var essais = essais + 1
+
+    if (guess < secret) {
+        print "C'est plus !"
+    } else {
+        if (guess > secret) {
+            print "C'est moins !"
+        } else {
+            print "BRAVO ! Vous avez trouvé le nombre " + secret
+            var trouve = true
+        }
+    }
+}
+
+var duration = Time.elapsed(start_time)
+// Conversion simple ms -> secondes
+var seconds = duration / 1000 
+
+print ""
+print "--- STATISTIQUES ---"
+print "Nombre d'essais : " + essais
+print "Temps ecoule : " + seconds + " secondes"
+
+// Petit commentaire sarcastique basé sur la performance
+if (essais < 5) {
+    print "Evaluation : Excellent !"
+} else {
+    if (essais < 10) {
+        print "Evaluation : Pas mal."
+    } else {
+        print "Evaluation : Peut mieux faire..."
+    }
+}

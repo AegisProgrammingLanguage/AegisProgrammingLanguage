@@ -8,6 +8,8 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::io::{self, Write};
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+use rand::Rng;
 
 // Type alias pour simplifier les signatures
 type SharedEnv = Rc<RefCell<Environment>>;
@@ -310,6 +312,33 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                     return Ok(Value::Boolean(false));
                 },
                 // ------------------------
+
+                // --- TIME & RANDOM ---
+                "time_now" => {
+                    let start = SystemTime::now();
+                    let since_the_epoch = start
+                        .duration_since(UNIX_EPOCH)
+                        .expect("Time went backwards");
+                    // On retourne des millisecondes pour être pratique
+                    return Ok(Value::Integer(since_the_epoch.as_millis() as i64));
+                },
+                "rand_int" => {
+                    if resolved.len() != 2 { return Err("rand_int attend 2 arguments (min, max)".into()); }
+                    let min = resolved[0].as_int()?;
+                    let max = resolved[1].as_int()?;
+                    
+                    if min >= max { return Err("min doit être inférieur à max".into()); }
+                    
+                    let mut rng = rand::thread_rng();
+                    let val = rng.gen_range(min..max); // [min, max[
+                    return Ok(Value::Integer(val));
+                },
+                "rand_float" => {
+                    let mut rng = rand::thread_rng();
+                    let val: f64 = rng.r#gen(); // 0.0 .. 1.0
+                    return Ok(Value::Float(val));
+                },
+
                  _ => {}
              }
 

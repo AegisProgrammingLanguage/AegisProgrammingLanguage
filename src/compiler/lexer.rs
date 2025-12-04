@@ -3,6 +3,7 @@ use std::str::Chars;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
+    True, False,
     Var, If, Else, While, For, Func, Return, Print, Input, Class, New, Extends, Import, Break, Switch, Case, Default,
     Identifier(String), StringLiteral(String), Integer(i64), Float(f64),
     Plus, Minus, Star, Slash, Percent,
@@ -115,10 +116,25 @@ impl<'a> Lexer<'a> {
             if c.is_alphanumeric() || c == '_' { s.push(self.chars.next().unwrap()); } else { break; }
         }
         match s.as_str() {
-            "var" => Token::Var, "if" => Token::If, "else" => Token::Else, "while" => Token::While,
-            "for" => Token::For, "func" => Token::Func, "return" => Token::Return, "print" => Token::Print,
-            "input" => Token::Input, "class" => Token::Class, "new" => Token::New, "extends" => Token::Extends,
-            "import" => Token::Import, "break" => Token::Break, "switch" => Token::Switch, "case" => Token::Case, "default" => Token::Default,
+            "var" => Token::Var, 
+            "if" => Token::If, 
+            "else" => Token::Else, 
+            "while" => Token::While,
+            "for" => Token::For, 
+            "func" => Token::Func, 
+            "return" => Token::Return, 
+            "print" => Token::Print,
+            "input" => Token::Input, 
+            "class" => Token::Class, 
+            "new" => Token::New, 
+            "extends" => Token::Extends,
+            "import" => Token::Import, 
+            "break" => Token::Break, 
+            "switch" => Token::Switch, 
+            "case" => Token::Case, 
+            "default" => Token::Default,
+            "true" => Token::True,
+            "false" => Token::False,
             _ => Token::Identifier(s),
         }
     }

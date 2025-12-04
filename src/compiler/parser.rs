@@ -409,6 +409,10 @@ impl Parser {
             Token::Integer(n) => { let v = *n; self.advance(); Ok(json!(v)) },
             Token::Float(f) => { let v = *f; self.advance(); Ok(json!(v)) },
             Token::StringLiteral(s) => { let v = s.clone(); self.advance(); Ok(json!(v)) },
+            
+            Token::True => { self.advance(); Ok(json!(true)) },
+            Token::False => { self.advance(); Ok(json!(false)) },
+            
             Token::LBracket => {
                 self.advance(); // Mange le '['
                 let mut elements = Vec::new();
