@@ -10,7 +10,9 @@ use serde_json::Value as JsonValue;
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 { return Err("Usage: aegis <file.aeg>".to_string()); }
+    if args.len() < 2 { 
+        return Err("Usage: aegis <file.aeg>".to_string()); 
+    }
     let filename = &args[1];
     let content = fs::read_to_string(filename).map_err(|e| e.to_string())?;
 

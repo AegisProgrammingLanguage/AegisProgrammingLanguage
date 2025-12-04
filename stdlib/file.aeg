@@ -1,0 +1,31 @@
+class FileManager() {
+    
+    // Lit un fichier et retourne son contenu (ou null)
+    read(path) {
+        return io_read(path)
+    }
+
+    // Écrit du contenu (écrase le fichier existant)
+    write(path, content) {
+        // On s'assure que le contenu est une string
+        return io_write(path, str(content))
+    }
+
+    // Ajoute du contenu à la fin du fichier
+    append(path, content) {
+        return io_append(path, str(content))
+    }
+
+    // Vérifie si le fichier existe
+    exists(path) {
+        return io_exists(path)
+    }
+    
+    // Supprime le fichier
+    delete(path) {
+        return io_delete(path)
+    }
+}
+
+// On instancie un singleton global
+var File = new FileManager()

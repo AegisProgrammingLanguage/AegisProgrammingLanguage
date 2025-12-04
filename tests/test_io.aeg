@@ -1,0 +1,39 @@
+import "stdlib/file.aeg"
+
+print "--- TEST FILE I/O ---"
+
+var filename = "test_data.txt"
+
+// 1. Nettoyage préventif
+if (File.exists(filename)) {
+    print "Le fichier existe déjà, suppression..."
+    File.delete(filename)
+} else {
+    print "Le fichier n'existe pas encore (OK)."
+}
+
+// 2. Écriture
+print "Ecriture dans le fichier..."
+File.write(filename, "Ligne 1: Bonjour Aegis !\n")
+
+// 3. Append
+print "Ajout d'une ligne..."
+File.append(filename, "Ligne 2: Ceci est un ajout.\n")
+
+// 4. Lecture et Vérification
+print "Lecture du fichier :"
+var content = File.read(filename)
+
+print "----------------"
+print content
+print "----------------"
+
+if (content.trim() == "null") {
+    print "❌ ERREUR : Impossible de lire le fichier"
+} else {
+    print "✅ Succès : Lecture terminée"
+}
+
+// Petit bonus : split sur le contenu du fichier
+var lines = content.trim().split("\n")
+print "Nombre de lignes : " + len(lines)

@@ -3,10 +3,11 @@ use crate::compiler;
 use crate::environment::Environment;
 use crate::loader::parse_block;
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::io::{self, Write};
+use std::path::Path;
 
 // Type alias pour simplifier les signatures
 type SharedEnv = Rc<RefCell<Environment>>;
@@ -251,9 +252,9 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
              
              // Built-ins
              match name.as_str() {
-                 "str" => return Ok(Value::String(format!("{}", resolved[0]))),
-                 "to_int" => return Ok(Value::Integer(resolved[0].as_int()?)),
-                 "len" => { // Support générique len()
+                "str" => return Ok(Value::String(format!("{}", resolved[0]))),
+                "to_int" => return Ok(Value::Integer(resolved[0].as_int()?)),
+                "len" => { // Support générique len()
                      match &resolved[0] {
                          Value::String(s) => return Ok(Value::Integer(s.len() as i64)),
                          Value::List(l) => return Ok(Value::Integer(l.borrow().len() as i64)),
@@ -261,6 +262,54 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                          _ => return Err("Type not supported for len()".into())
                      }
                  },
+                 // --- FILE I/O (Natif) ---
+                "io_read" => {
+                    if resolved.len() != 1 { return Err("io_read attend 1 argument (chemin)".into()); }
+                    let path = resolved[0].as_str()?;
+                    
+                    match fs::read_to_string(&path) {
+                        Ok(content) => return Ok(Value::String(content)),
+                        Err(_) => return Ok(Value::Null), // Retourne null si fichier introuvable
+                    }
+                },
+                "io_write" => {
+                    if resolved.len() != 2 { return Err("io_write attend 2 arguments (chemin, contenu)".into()); }
+                    let path = resolved[0].as_str()?;
+                    let content = resolved[1].as_str()?; // Force la conversion en string
+                    
+                    fs::write(&path, content).map_err(|e| format!("Erreur écriture: {}", e))?;
+                    return Ok(Value::Boolean(true));
+                },
+                "io_append" => {
+                    if resolved.len() != 2 { return Err("io_append attend 2 arguments (chemin, contenu)".into()); }
+                    let path = resolved[0].as_str()?;
+                    let content = resolved[1].as_str()?;
+                    
+                    let mut file = OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .create(true) // Crée le fichier s'il n'existe pas
+                        .open(&path)
+                        .map_err(|e| format!("Erreur ouverture fichier: {}", e))?;
+
+                    write!(file, "{}", content).map_err(|e| format!("Erreur append: {}", e))?;
+                    return Ok(Value::Boolean(true));
+                },
+                "io_exists" => {
+                    if resolved.len() != 1 { return Err("io_exists attend 1 argument (chemin)".into()); }
+                    let path = resolved[0].as_str()?;
+                    return Ok(Value::Boolean(Path::new(&path).exists()));
+                },
+                "io_delete" => {
+                    if resolved.len() != 1 { return Err("io_delete attend 1 argument".into()); }
+                    let path = resolved[0].as_str()?;
+                    if Path::new(&path).exists() {
+                        fs::remove_file(&path).map_err(|e| e.to_string())?;
+                        return Ok(Value::Boolean(true));
+                    }
+                    return Ok(Value::Boolean(false));
+                },
+                // ------------------------
                  _ => {}
              }
 
