@@ -8,6 +8,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::io::{self, Write};
 use std::path::Path;
+use std::{thread, time};
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 
@@ -464,6 +465,11 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                                 // On retourne des millisecondes pour être pratique
                                 return Ok(Value::Integer(since_the_epoch.as_millis() as i64));
                             },
+                            "time_sleep" => {
+                                let ms = resolved_args[0].as_int()?;
+                                thread::sleep(time::Duration::from_millis(ms as u64));
+                                Ok(Value::Null)
+                            },
                             // ------------------------
 
                             // --- RANDOM ---
@@ -482,6 +488,15 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                                 let mut rng = rand::thread_rng();
                                 let val: f64 = rng.r#gen(); // 0.0 .. 1.0
                                 return Ok(Value::Float(val));
+                            },
+                            // ------------------------
+
+                            // --- System ---
+                            "io_clear" => {
+                                // Petit hack cross-platform pour nettoyer le terminal
+                                print!("\x1B[2J\x1B[1;1H"); 
+                                io::stdout().flush().unwrap();
+                                Ok(Value::Null)
                             },
                             // ------------------------
 

@@ -28,6 +28,27 @@ impl Environment {
     }
 
     pub fn set_variable(&mut self, name: String, value: Value) {
+        // 1. Si la variable existe déjà dans ce scope, on la met à jour
+        if self.variables.contains_key(&name) {
+            self.variables.insert(name, value);
+            return;
+        }
+
+        // 2. Sinon, on regarde si un parent possède cette variable
+        // (Cela permet aux lambdas de modifier les variables du scope supérieur)
+        if let Some(parent) = &self.parent {
+            // On vérifie d'abord si le parent (ou ses parents) connait cette variable
+            let exists_in_parent = parent.borrow().get_variable(&name).is_some();
+            
+            if exists_in_parent {
+                // Si oui, on laisse le parent gérer la mise à jour (récursion)
+                parent.borrow_mut().set_variable(name, value);
+                return;
+            }
+        }
+
+        // 3. Si elle n'existe nulle part, on la crée dans le scope courant
+        // (C'est une nouvelle déclaration)
         self.variables.insert(name, value);
     }
 

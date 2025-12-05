@@ -9,4 +9,8 @@ namespace Time {
     func elapsed(start_time) {
         return time_now() - start_time
     }
+
+    func sleep(ms) { 
+        return time_sleep(ms) 
+    }
 }

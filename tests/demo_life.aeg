@@ -1,0 +1,107 @@
+import "stdlib/system.aeg"
+import "stdlib/time.aeg"
+import "stdlib/random.aeg"
+import "stdlib/math.aeg"
+
+print "--- CONWAY'S GAME OF LIFE ---"
+Time.sleep(1000)
+
+// Configuration
+var WIDTH = 20
+var HEIGHT = 10
+var GEN = 0
+
+// 1. Initialisation de la grille (Tableau 2D)
+// 0 = Mort, 1 = Vivant
+var grid = []
+
+for (y, 0, HEIGHT, 1) {
+    var row = []
+    for (x, 0, WIDTH, 1) {
+        // Aléatoire : 0 ou 1
+        row.push(Random.int(0, 2))
+    }
+    grid.push(row)
+}
+
+// Fonction pour compter les voisins vivants autour de x,y
+func count_neighbors(g, x, y) {
+    var count = 0
+    // On regarde les 9 cases autour
+    for (j, -1, 2, 1) {
+        for (i, -1, 2, 1) {
+            if (i == 0 && j == 0) { 
+                // On ne se compte pas soi-même
+                // (continue n'est pas implémenté, donc bloc vide)
+            } else {
+                var ny = y + j
+                var nx = x + i
+                
+                // Vérification des bords (Tore / Monde infini simulé)
+                // Si on sort à droite, on revient à gauche, etc.
+                if (nx < 0) { nx = WIDTH - 1 }
+                if (nx >= WIDTH) { nx = 0 }
+                if (ny < 0) { ny = HEIGHT - 1 }
+                if (ny >= HEIGHT) { ny = 0 }
+                
+                // On récupère la valeur
+                var row = g.at(ny)
+                var cell = row.at(nx)
+                count += cell
+            }
+        }
+    }
+    return count
+}
+
+// Boucle principale
+while (true) {
+    System.clear()
+    print "GENERATION: " + GEN
+    print "--------------------"
+    
+    // 1. Affichage
+    grid.for_each(func(row) {
+        var line = ""
+        row.for_each(func(cell) {
+            if (cell == 1) { line += "O " } 
+            else { line += ". " }
+        })
+        print line
+    })
+    
+    // 2. Calcul de la prochaine génération
+    var next_grid = []
+    
+    for (y, 0, HEIGHT, 1) {
+        var new_row = []
+        for (x, 0, WIDTH, 1) {
+            var neighbors = count_neighbors(grid, x, y)
+            var current = grid.at(y).at(x)
+            
+            // Règles du jeu
+            var next_val = 0
+            
+            if (current == 1) {
+                // Règle 1 & 2 : Survie si 2 ou 3 voisins
+                if (neighbors == 2 || neighbors == 3) {
+                    next_val = 1
+                }
+                // Sinon meurt (sous-pop ou sur-pop)
+            } else {
+                // Règle 4 : Naissance si exactement 3 voisins
+                if (neighbors == 3) {
+                    next_val = 1
+                }
+            }
+            new_row.push(next_val)
+        }
+        next_grid.push(new_row)
+    }
+    
+    // Mise à jour
+    grid = next_grid
+    GEN++
+    
+    Time.sleep(1000) // Pause de 1s
+}
