@@ -74,6 +74,7 @@ impl Parser {
 
     fn parse_statement(&mut self) -> Result<Value, String> {
         match self.peek() {
+            Token::At => self.parse_decorated_function(),
             Token::Var => self.parse_var(),
             Token::Print => self.parse_print(),
             Token::If => self.parse_if(),
@@ -320,6 +321,52 @@ impl Parser {
         Ok(json!(["namespace", name, body]))
     }
 
+    fn parse_decorated_function(&mut self) -> Result<Value, String> {
+        // 1. On mange le '@'
+        self.advance();
+        
+        // 2. On récupère le nom du décorateur (ex: "log")
+        let decorator_name = if let Token::Identifier(n) = self.advance() {
+            n.clone()
+        } else {
+            return Err("Expect decorator name after '@'".into());
+        };
+
+        // 3. On s'attend à trouver une fonction juste après
+        self.consume(Token::Func, "Expect 'func' after decorator")?;
+        
+        // 4. On parse le nom de la fonction cible (ex: "dire_bonjour")
+        let func_name = if let Token::Identifier(n) = self.advance() {
+            n.clone()
+        } else {
+            return Err("Expect function name".into());
+        };
+
+        // 5. On parse les paramètres et le corps (comme une lambda)
+        self.consume(Token::LParen, "Expect '('")?;
+        let mut params = Vec::new();
+        if !self.check(&Token::RParen) {
+            loop {
+                if let Token::Identifier(p) = self.advance() { params.push(p.clone()); }
+                if !self.match_token(Token::Comma) { break; }
+            }
+        }
+        self.consume(Token::RParen, "Expect ')'")?;
+        let body = self.parse_block()?;
+
+        // 6. Construction de l'AST équivalent à :
+        // var func_name = decorator_name( func(params){ body } )
+        
+        let lambda = json!(["lambda", params, body]);
+        let decorator_var = json!(["get", decorator_name]);
+        
+        // L'appel : decorator(lambda)
+        let call_expr = json!(["call", decorator_var, [lambda]]);
+        
+        // L'assignation : var func_name = ...
+        Ok(json!(["set", func_name, call_expr]))
+    }
+
     fn parse_if(&mut self) -> Result<Value, String> {
         self.advance();
         self.consume(Token::LParen, "Expect '('")?;
@@ -558,15 +605,16 @@ impl Parser {
                 if let Some(&'{') = chars.peek() {
                     chars.next(); // Eat '{'
                     
-                    // 1. Push previous text if not empty
                     if !current_text.is_empty() {
                         parts.push(json!(current_text.clone()));
                         current_text.clear();
                     }
 
-                    // 2. Extract code until '}'
+                    // Extraction intelligente
                     let mut code_snippet = String::new();
+                    let mut format_specifier = String::new();
                     let mut brace_count = 1;
+                    let mut found_colon = false;
                     
                     while let Some(code_char) = chars.next() {
                         if code_char == '}' {
@@ -575,31 +623,44 @@ impl Parser {
                         } else if code_char == '{' {
                             brace_count += 1;
                         }
-                        code_snippet.push(code_char);
+
+                        // Si on trouve ':' et qu'on est au niveau 1 (pas dans un dict imbriqué)
+                        if code_char == ':' && brace_count == 1 && !found_colon {
+                            found_colon = true;
+                            continue; // On ne l'ajoute pas au code, on switch de mode
+                        }
+
+                        if found_colon {
+                            format_specifier.push(code_char);
+                        } else {
+                            code_snippet.push(code_char);
+                        }
                     }
                     
-                    if brace_count > 0 { return Err("Unterminated interpolation '${'".into()); }
+                    if brace_count > 0 { return Err("Unterminated interpolation".into()); }
 
-                    // 3. Compile the snippet using a temporary sub-parser
-                    // We reuse the existing Lexer and Parser logic!
+                    // Compilation du snippet
                     let mut sub_lexer = super::lexer::Lexer::new(&code_snippet);
                     let sub_tokens = sub_lexer.tokenize();
                     let mut sub_parser = Parser::new(sub_tokens);
                     let expr = sub_parser.parse_expression()?;
                     
-                    parts.push(expr);
+                    if !format_specifier.is_empty() {
+                        // Si format détecté -> Appelle fmt(expr, format)
+                        // AST: ["call", ["get", "fmt"], [expr, format_string]]
+                        let fmt_call = json!(["call", ["get", "fmt"], [expr, json!(format_specifier)]]);
+                        parts.push(fmt_call);
+                    } else {
+                        parts.push(expr);
+                    }
+                    
                     continue;
                 }
             }
             current_text.push(c);
         }
         
-        if !current_text.is_empty() {
-            parts.push(json!(current_text));
-        }
-
-        // 4. Combine all parts with "+"
-        // "Hello " + name + "!"
+        if !current_text.is_empty() { parts.push(json!(current_text)); }
         if parts.is_empty() { return Ok(json!("")); }
         
         let mut final_expr = parts[0].clone();

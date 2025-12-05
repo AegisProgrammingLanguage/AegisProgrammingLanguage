@@ -1,0 +1,37 @@
+print "--- TEST DECORATEURS ---"
+
+// 1. Définition du décorateur
+// Il prend une fonction 'f' et retourne une nouvelle fonction (wrapper)
+func logger(f) {
+    return func(arg) {
+        print "[LOG] Appel de fonction avec : " + arg
+        var res = f(arg)
+        print "[LOG] Resultat : " + res
+        return res
+    }
+}
+
+// 2. Utilisation
+@logger
+func carre(x) {
+    return x * x
+}
+
+print "Calcul..."
+var c = carre(5)
+print "Valeur finale : " + c
+
+
+print ""
+print "--- TEST FORMATAGE ---"
+
+var prix = 12.56789
+var nom = "Produit"
+
+// Affichage avec 2 décimales
+print "Prix normal : ${prix}"
+print "Prix formate : ${prix:.2f} euros"
+print "Prix arrondi : ${prix:.0f} euros"
+
+// Test complexe (expression + format)
+print "Calcul formate : ${(prix * 2):.1f}"

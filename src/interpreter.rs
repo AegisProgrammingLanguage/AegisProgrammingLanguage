@@ -1,6 +1,6 @@
 use crate::ast::{Instruction, Expression, Value};
 use crate::compiler;
-use crate::environment::Environment;
+use crate::ast::environment::{Environment,SharedEnv};
 use crate::loader::parse_block;
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
@@ -11,9 +11,6 @@ use std::path::Path;
 use std::{thread, time};
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
-
-// Type alias pour simplifier les signatures
-type SharedEnv = Rc<RefCell<Environment>>;
 
 /// Helper pour déterminer si une valeur est "Vraie" (Python-like)
 fn is_truthy(val: &Value) -> bool {
@@ -26,7 +23,7 @@ fn is_truthy(val: &Value) -> bool {
         Value::List(l) => !l.borrow().is_empty(),
         Value::Dict(d) => !d.borrow().is_empty(),
         Value::Instance(_) => true,
-        Value::Function(_, _) => true,
+        Value::Function(..) => true,
         Value::Class(_) => true
     }
 }
@@ -198,7 +195,7 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
         },
 
         Expression::Function { params, body } => {
-            Ok(Value::Function(params.clone(), body.clone()))
+            Ok(Value::Function(params.clone(), body.clone(), Some(env.clone())))
         },
 
         // Appels de méthodes (Copie optimisée de ton code précédent)
@@ -292,7 +289,7 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                         // 2. On cherche si une clé correspond au nom de la méthode
                         if let Some(val) = dict.get(method_name) {
                             // 3. Si c'est une fonction, on l'exécute !
-                            if let Value::Function(_, _) = val {
+                            if let Value::Function(..) = val {
                                 // Important : on doit cloner val pour relâcher l'emprunt sur dict avant d'exécuter
                                 let func = val.clone();
                                 drop(dict); // On libère le borrow ici pour éviter les conflits si la fonction modifie le dict
@@ -376,18 +373,8 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
             let target_val_result = evaluate(target_expr, env.clone());
             
             match target_val_result {
-                Ok(Value::Function(params, body)) => {
-                    // C'est une fonction utilisateur !
-                    if resolved_args.len() != params.len() { return Err(format!("Arity mismatch: attendu {}, reçu {}", params.len(), resolved_args.len())); }
-                    
-                    let child_env = Environment::new_child(env.clone());
-                    for (p, v) in params.iter().zip(resolved_args) {
-                        child_env.borrow_mut().set_variable(p.clone(), v);
-                    }
-                    for instr in body {
-                        if let Some(ret) = execute(&instr, child_env.clone())? { return Ok(ret); }
-                    }
-                    Ok(Value::Null)
+                Ok(val @ Value::Function(_, _, _)) => { 
+                    apply_func(val, resolved_args, env)
                 },
                 
                 // Gestion des Natives (qui ne sont pas des Value::Function stockées)
@@ -406,6 +393,31 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                                     Value::Dict(d) => return Ok(Value::Integer(d.borrow().len() as i64)),
                                     _ => return Err("Type not supported for len()".into())
                                 }
+                            },
+                            "fmt" => {
+                                if resolved_args.len() != 2 { return Err("fmt attend 2 arguments (valeur, format)".into()); }
+                                let val = &resolved_args[0];
+                                let format_str = resolved_args[1].as_str()?;
+                                
+                                // Parsing basique du format (ex: ".2f")
+                                if format_str.ends_with("f") {
+                                    // Gestion des Floats
+                                    let precision = format_str.trim_start_matches('.').trim_end_matches('f')
+                                        .parse::<usize>().unwrap_or(2); // defaut 2
+                                    
+                                    let num = match val {
+                                        Value::Integer(i) => *i as f64,
+                                        Value::Float(f) => *f,
+                                        _ => return Ok(Value::String(format!("{}", val))) // Fallback
+                                    };
+                                    
+                                    // Astuce Rust pour précision dynamique
+                                    return Ok(Value::String(format!("{:.1$}", num, precision)));
+                                } 
+                                
+                                // Tu peux ajouter d'autres formats ici (ex: "b" pour binaire, "x" pour hexa...)
+                                
+                                Ok(Value::String(format!("{}", val)))
                             },
                             // --- FILE I/O (Natif) ---
                             "io_read" => {
@@ -618,7 +630,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
         },
 
         Instruction::Function { name, params, body } => {
-            let func_value = Value::Function(params.clone(), body.clone());
+            let func_value = Value::Function(params.clone(), body.clone(), Some(env.clone()));
             env.borrow_mut().set_variable(name.clone(), func_value);
             Ok(None)
         },
@@ -793,16 +805,18 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
 }
 
 /// Helper pour exécuter une fonction Aegis (Lambda ou Nommée) depuis Rust
-fn apply_func(func_val: Value, args: Vec<Value>, env: SharedEnv) -> Result<Value, String> {
+fn apply_func(func_val: Value, args: Vec<Value>, current_env: SharedEnv) -> Result<Value, String> {
     match func_val {
-        Value::Function(params, body) => {
+        Value::Function(params, body, closure_env) => {
              // Vérification du nombre d'arguments
              if args.len() != params.len() { 
                 return Err(format!("Arity mismatch: attendu {}, reçu {}", params.len(), args.len())); 
              }
+
+             let parent_scope = closure_env.unwrap_or(current_env);
              
              // Création du scope de la fonction
-             let child_env = Environment::new_child(env.clone());
+             let child_env = Environment::new_child(parent_scope);
              
              // Liaison des arguments aux paramètres
              for (p, v) in params.iter().zip(args) {

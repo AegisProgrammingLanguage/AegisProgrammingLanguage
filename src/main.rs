@@ -1,10 +1,9 @@
 mod ast;
 mod compiler;
-mod environment;
 mod interpreter;
 mod loader;
 
-use environment::Environment;
+use ast::Environment;
 use std::{fs, env, io::{self, Write}};
 use serde_json::Value as JsonValue;
 

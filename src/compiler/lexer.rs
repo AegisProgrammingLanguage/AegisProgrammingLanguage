@@ -20,6 +20,7 @@ pub enum Token {
     MinusMinus, // --
     Namespace,
     BitAnd, BitOr, BitXor, ShiftLeft, ShiftRight,
+    At
 }
 
 pub struct Lexer<'a> {
@@ -157,6 +158,10 @@ impl<'a> Lexer<'a> {
                     if let Some(&'=') = self.chars.peek() { self.chars.next(); tokens.push(Token::Neq); }
                     else { tokens.push(Token::Bang); }
                 },
+                '@' => {
+                    self.chars.next();
+                    tokens.push(Token::At);
+                }
                 '"' => tokens.push(self.read_string()),
                 c if c.is_digit(10) => tokens.push(self.read_number()),
                 c if c.is_alphabetic() || c == '_' => tokens.push(self.read_identifier()),
