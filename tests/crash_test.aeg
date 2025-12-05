@@ -1,0 +1,18 @@
+print "--- TEST DU SYSTEME DE DEBUG ---"
+print "Ligne 2 : Tout va bien."
+print "Ligne 3 : Toujours ok."
+
+func provoquer_erreur() {
+    print "Ligne 6 : Entree dans la fonction."
+    var a = 10
+    var b = 0
+    
+    // L'erreur doit se declencher ici (Ligne 10)
+    var resultat = a / b 
+    
+    return resultat
+}
+
+print "Ligne 15 : Appel de la fonction..."
+provoquer_erreur()
+print "Cette ligne ne devrait jamais s'afficher."

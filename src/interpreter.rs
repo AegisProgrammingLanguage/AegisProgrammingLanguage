@@ -1,4 +1,4 @@
-use crate::ast::{Instruction, Expression, Value};
+use crate::ast::{Expression, Instruction, Statement, Value};
 use crate::compiler;
 use crate::ast::environment::{Environment,SharedEnv};
 use crate::loader::parse_block;
@@ -567,7 +567,17 @@ fn validate_type(val: &Value, expected_type: &str) -> bool {
 
 /// Exécute une instruction.
 /// Retourne `Ok(Some(Value))` si un `return` a été rencontré, `Ok(None)` sinon.
-pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, String> {
+pub fn execute(stmt: &Statement, env: SharedEnv) -> Result<Option<Value>, String> {
+    match execute_internal(&stmt.kind, env) {
+        Ok(res) => Ok(res),
+        Err(msg) => {
+            // C'EST ICI QU'ON AJOUTE LE NUMÉRO DE LIGNE !
+            Err(format!("[Ligne {}] {}", stmt.line, msg))
+        }
+    }
+}
+
+fn execute_internal(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, String> {
     match instr {
         Instruction::Set(name, type_annot, expr) => {
             let val = evaluate(expr, env.clone())?;
@@ -593,13 +603,13 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
             if is_truthy(&cond_val) {
                 for i in body {
                     // Si une instruction retourne une valeur (return), on propage immédiatement
-                    if let Some(ret_val) = execute(i, env.clone())? {
+                    if let Some(ret_val) = execute(&i, env.clone())? {
                         return Ok(Some(ret_val));
                     }
                 }
             } else {
                 for i in else_body {
-                    if let Some(ret_val) = execute(i, env.clone())? {
+                    if let Some(ret_val) = execute(&i, env.clone())? {
                         return Ok(Some(ret_val));
                     }
                 }
@@ -610,7 +620,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
         Instruction::While { condition, body } => {
             while is_truthy(&evaluate(condition, env.clone())?) {
                 for i in body {
-                    if let Some(ret_val) = execute(i, env.clone())? {
+                    if let Some(ret_val) = execute(&i, env.clone())? {
                         return Ok(Some(ret_val));
                     }
                 }
@@ -647,7 +657,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
                 
                 // Exécuter le corps
                 for instr in body {
-                    if let Some(ret) = execute(instr, env.clone())? {
+                    if let Some(ret) = execute(&instr, env.clone())? {
                         return Ok(Some(ret));
                     }
                 }
@@ -762,7 +772,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
             // mais généralement try partage le scope parent. Restons simples pour l'instant (scope partagé).
             for instr in try_body {
                 // L'astuce est ici : on utilise match au lieu de ? pour ne pas planter l'interpréteur
-                match execute(instr, env.clone()) {
+                match execute(&instr, env.clone()) {
                     Ok(Some(ret)) => return Ok(Some(ret)), // Gestion du return dans un try
                     Ok(None) => continue, // Tout va bien, instruction suivante
                     Err(msg) => {
@@ -780,7 +790,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
                 catch_env.borrow_mut().set_variable(error_var.clone(), Value::String(msg));
                 
                 for instr in catch_body {
-                    if let Some(ret) = execute(instr, catch_env.clone())? {
+                    if let Some(ret) = execute(&instr, catch_env.clone())? {
                         return Ok(Some(ret));
                     }
                 }
@@ -801,7 +811,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
                     // Exécuter le corps du case
                     // Note: On pourrait créer un scope enfant ici si on voulait isoler les variables
                     for instr in case_body {
-                         if let Some(ret) = execute(instr, env.clone())? {
+                         if let Some(ret) = execute(&instr, env.clone())? {
                             return Ok(Some(ret));
                         }
                     }
@@ -812,7 +822,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
 
             if !match_found {
                 for instr in default {
-                    if let Some(ret) = execute(instr, env.clone())? {
+                    if let Some(ret) = execute(&instr, env.clone())? {
                         return Ok(Some(ret));
                     }
                 }
@@ -827,7 +837,7 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
             
             // 2. Execute the body inside this environment
             for instr in body {
-                if let Some(ret) = execute(instr, ns_env.clone())? {
+                if let Some(ret) = execute(&instr, ns_env.clone())? {
                     return Ok(Some(ret)); // Allow return inside namespace (edge case)
                 }
             }

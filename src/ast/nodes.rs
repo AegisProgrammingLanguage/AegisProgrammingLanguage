@@ -6,7 +6,7 @@ pub struct ClassDefinition {
     pub name: String,
     pub parent: Option<String>,
     pub params: Vec<(String, Option<String>)>,
-    pub methods: HashMap<String, (Vec<(String, Option<String>)>, Vec<Instruction>)>,
+    pub methods: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,7 +16,7 @@ pub enum Expression {
     Function {
         params: Vec<(String, Option<String>)>,
         ret_type: Option<String>,
-        body: Vec<Instruction>
+        body: Vec<Statement>
     },
 
     // Arithmetic
@@ -59,19 +59,19 @@ pub enum Instruction {
     Print(Expression),
     If {
         condition: Expression,
-        body: Vec<Instruction>,
-        else_body: Vec<Instruction>
+        body: Vec<Statement>,
+        else_body: Vec<Statement>
     },
     While {
         condition: Expression,
-        body: Vec<Instruction>
+        body: Vec<Statement>
     },
     ForRange {
         var_name: String,
         start: Expression,
         end: Expression,
         step: Expression,
-        body: Vec<Instruction>,
+        body: Vec<Statement>,
     },
     Return(Expression),
     ExpressionStatement(Expression),
@@ -79,24 +79,30 @@ pub enum Instruction {
         name: String,
         params: Vec<(String, Option<String>)>,
         ret_type: Option<String>,
-        body: Vec<Instruction>
+        body: Vec<Statement>
     },
     Input(String, Expression),
     Class(ClassDefinition),
     SetAttr(Box<Expression>, String, Expression),
     Import(String),
     TryCatch {
-        try_body: Vec<Instruction>,
+        try_body: Vec<Statement>,
         error_var: String,
-        catch_body: Vec<Instruction>,
+        catch_body: Vec<Statement>,
     },
     Switch {
         value: Expression,
-        cases: Vec<(Expression, Vec<Instruction>)>, 
-        default: Vec<Instruction>,
+        cases: Vec<(Expression, Vec<Statement>)>, 
+        default: Vec<Statement>,
     },
     Namespace {
         name: String,
-        body: Vec<Instruction>
+        body: Vec<Statement>
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Statement {
+    pub kind: Instruction,
+    pub line: usize
 }

@@ -20,7 +20,7 @@ pub enum Value {
     List(Rc<RefCell<Vec<Value>>>),
     Dict(Rc<RefCell<HashMap<String, Value>>>),
     Instance(Rc<RefCell<InstanceData>>),
-    Function(Vec<(String, Option<String>)>, Option<String>, Vec<crate::ast::Instruction>, Option<SharedEnv>),
+    Function(Vec<(String, Option<String>)>, Option<String>, Vec<crate::ast::Statement>, Option<SharedEnv>),
     Class(ClassDefinition),
     Null
 }

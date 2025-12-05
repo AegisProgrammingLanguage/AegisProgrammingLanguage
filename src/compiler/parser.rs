@@ -1,4 +1,4 @@
-use super::lexer::Token;
+use super::lexer::{ Token, TokenKind };
 use serde_json::{json, Value};
 
 pub struct Parser {
@@ -19,8 +19,22 @@ impl Parser {
         Ok(json!(instructions))
     }
 
-    fn peek(&self) -> &Token {
-        &self.tokens[self.pos]
+    // --- Helpers ---
+
+    fn peek(&self) -> &TokenKind {
+        &self.tokens[self.pos].kind
+    }
+
+    fn current_line(&self) -> usize {
+        if self.is_at_end() {
+            if !self.tokens.is_empty() {
+                self.tokens[self.tokens.len() - 1].line
+            } else {
+                1
+            }
+        } else {
+            self.tokens[self.pos].line
+        }
     }
 
     fn advance(&mut self) -> &Token {
@@ -30,8 +44,8 @@ impl Parser {
         &self.tokens[self.pos - 1]
     }
 
-    fn match_token(&mut self, token: Token) -> bool {
-        if self.check(&token) {
+    fn match_token(&mut self, kind: TokenKind) -> bool {
+        if self.check(&kind) {
             self.advance();
             true
         } else {
@@ -39,246 +53,193 @@ impl Parser {
         }
     }
 
-    fn check(&self, token: &Token) -> bool {
+    fn check(&self, kind: &TokenKind) -> bool {
         if self.is_at_end() { return false; }
-        // Comparaison approximative car Token::Identifier porte une donnée
-        std::mem::discriminant(self.peek()) == std::mem::discriminant(token)
+        std::mem::discriminant(self.peek()) == std::mem::discriminant(kind)
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek() == &Token::EOF
+        self.peek() == &TokenKind::EOF
     }
 
-    fn consume(&mut self, expected: Token, msg: &str) -> Result<&Token, String> {
+    fn consume(&mut self, expected: TokenKind, msg: &str) -> Result<&Token, String> {
         if self.check(&expected) {
             Ok(self.advance())
         } else {
-            Err(format!("{} (Got {:?})", msg, self.peek()))
+            Err(format!("{} (Line {})", msg, self.current_line()))
         }
-    }
-
-    fn parse_params_list(&mut self) -> Result<Value, String> {
-        self.consume(Token::LParen, "Expect '('")?;
-        let mut params = Vec::new();
-        if !self.check(&Token::RParen) {
-            loop {
-                if let Token::Identifier(p) = self.advance() { 
-                    let p_name = p.clone();
-                    let p_type = self.parse_type_annotation()?; // Parse ": type"
-                    params.push(json!([p_name, p_type]));
-                }
-                if !self.match_token(Token::Comma) { break; }
-            }
-        }
-        self.consume(Token::RParen, "Expect ')'")?;
-        Ok(json!(params))
     }
 
     // --- Statements ---
 
     fn parse_statement(&mut self) -> Result<Value, String> {
         match self.peek() {
-            Token::At => self.parse_decorated_function(),
-            Token::Var => self.parse_var(),
-            Token::Print => self.parse_print(),
-            Token::If => self.parse_if(),
-            Token::While => self.parse_while(),
-            Token::For => self.parse_for(),
-            Token::Func => self.parse_func(),
-            Token::Class => self.parse_class(),
-            Token::Return => self.parse_return(),
-            Token::Input => self.parse_input(),
-            Token::Break => { self.advance(); Ok(json!(["break"])) },
-            Token::Import => self.parse_import(),
-            Token::Try => self.parse_try(),
-            Token::Switch => self.parse_switch(),
-            Token::Namespace => self.parse_namespace(),
+            TokenKind::At => self.parse_decorated_function(),
+            TokenKind::Var => self.parse_var(),
+            TokenKind::Print => self.parse_print(),
+            TokenKind::If => self.parse_if(),
+            TokenKind::While => self.parse_while(),
+            TokenKind::For => self.parse_for(),
+            TokenKind::Func => self.parse_func(),
+            TokenKind::Class => self.parse_class(),
+            TokenKind::Return => self.parse_return(),
+            TokenKind::Input => self.parse_input(),
+            TokenKind::Break => { 
+                let line = self.current_line();
+                self.advance(); 
+                Ok(json!(["break", line])) 
+            },
+            TokenKind::Import => self.parse_import(),
+            TokenKind::Try => self.parse_try(),
+            TokenKind::Switch => self.parse_switch(),
+            TokenKind::Namespace => self.parse_namespace(),
             
-            // Cas générique pour Identifiants (Variables, Appels, Attributs)
-            Token::Identifier(_) => {
-                // 1. On parse l'expression complète (ex: "x", "this.nom", "obj.method()")
-                // Cela consomme les tokens correctement, y compris les points.
+            TokenKind::Identifier(_) => {
+                let line = self.current_line();
                 let expr = self.parse_expression()?;
 
                 match self.peek() {
-                    Token::Eq => {
+                    TokenKind::Eq => {
                         self.advance();
                         let value = self.parse_expression()?;
-                    
-                        // 3. On transforme l'expression de lecture en instruction d'écriture
-                        // On inspecte le JSON généré par parse_expression
-                        if let Some(arr) = expr.as_array() {
-                            let cmd = arr[0].as_str().unwrap_or("");
-                            
-                            // Cas 1: Variable simple ["get", "x"] -> ["set", "x", val]
-                            if cmd == "get" {
-                                let name = &arr[1];
-                                return Ok(json!(["set", name, value]));
-                            }
-                            
-                            // Cas 2: Attribut ["get_attr", obj, "attr"] -> ["set_attr", obj, "attr", val]
-                            if cmd == "get_attr" {
-                                let obj = &arr[1];
-                                let attr = &arr[2];
-                                return Ok(json!(["set_attr", obj, attr, value]));
-                            }
-                        }
-                        
-                        return self.convert_to_assignment(expr, value);
+                        return self.convert_to_assignment(line, expr, value);
                     },
-                    // Case: i++  =>  i = i + 1
-                    Token::PlusPlus => {
+                    TokenKind::PlusPlus => {
                         self.advance();
                         let one = json!(1);
-                        // We construct: expr = expr + 1
                         let new_val = json!(["+", expr.clone(), one]);
-                        return self.convert_to_assignment(expr, new_val);
+                        return self.convert_to_assignment(line, expr, new_val);
                     },
-                    // Case: i--  =>  i = i - 1
-                    Token::MinusMinus => {
+                    TokenKind::MinusMinus => {
                         self.advance();
                         let one = json!(1);
                         let new_val = json!(["-", expr.clone(), one]);
-                        return self.convert_to_assignment(expr, new_val);
+                        return self.convert_to_assignment(line, expr, new_val);
                     },
-                    // Case: x += 10  =>  x = x + 10
-                    Token::PlusEq => {
+                    TokenKind::PlusEq => {
                         self.advance();
                         let val = self.parse_expression()?;
                         let new_val = json!(["+", expr.clone(), val]);
-                        return self.convert_to_assignment(expr, new_val);
+                        return self.convert_to_assignment(line, expr, new_val);
                     },
-                    Token::MinusEq => {
+                    TokenKind::MinusEq => {
                         self.advance();
                         let val = self.parse_expression()?;
                         let new_val = json!(["-", expr.clone(), val]);
-                        return self.convert_to_assignment(expr, new_val);
+                        return self.convert_to_assignment(line, expr, new_val);
                     },
-                    Token::StarEq => {
+                    TokenKind::StarEq => {
                         self.advance();
                         let val = self.parse_expression()?;
                         let new_val = json!(["*", expr.clone(), val]);
-                        return self.convert_to_assignment(expr, new_val);
+                        return self.convert_to_assignment(line, expr, new_val);
                     },
-                    Token::SlashEq => {
+                    TokenKind::SlashEq => {
                         self.advance();
                         let val = self.parse_expression()?;
                         let new_val = json!(["/", expr.clone(), val]);
-                        return self.convert_to_assignment(expr, new_val);
+                        return self.convert_to_assignment(line, expr, new_val);
                     },
-                    
-                    // -----------------------------------------------
-                    
-                    _ => return Ok(expr) // Just an expression statement (like a function call)
+                    _ => {
+                        if let Some(arr) = expr.as_array() {
+                            let mut new_arr = arr.clone();
+                            if !new_arr.is_empty() {
+                                if let Some(cmd) = new_arr[0].as_str() {
+                                    if cmd == "call" || cmd == "call_method" {
+                                        new_arr.insert(1, json!(line));
+                                        return Ok(Value::Array(new_arr));
+                                    }
+                                }
+                            }
+                        }
+                        Ok(expr) 
+                    }
                 }
             },
             
-            _ => Err(format!("Unexpected token at start of statement: {:?}", self.peek())),
+            _ => Err(format!("Unexpected token at start of statement: {:?} (Line {})", self.peek(), self.current_line())),
         }
     }
 
-    // Helper to transform a getter expression into a setter instruction
-    fn convert_to_assignment(&self, target: Value, value: Value) -> Result<Value, String> {
+    fn convert_to_assignment(&self, line: usize, target: Value, value: Value) -> Result<Value, String> {
         if let Some(arr) = target.as_array() {
             let cmd = arr[0].as_str().unwrap_or("");
             
             if cmd == "get" {
                 let name = &arr[1];
-                return Ok(json!(["set", name, value]));
+                return Ok(json!(["set", line, name, null, value]));
             }
             if cmd == "get_attr" {
                 let obj = &arr[1];
                 let attr = &arr[2];
-                return Ok(json!(["set_attr", obj, attr, value]));
+                return Ok(json!(["set_attr", line, obj, attr, value]));
             }
         }
-        Err("Invalid assignment target".to_string())
+        Err(format!("Invalid assignment target (Line {})", line))
     }
 
     fn parse_block(&mut self) -> Result<Value, String> {
-        self.consume(Token::LBrace, "Expect '{' before block")?;
+        self.consume(TokenKind::LBrace, "Expect '{' before block")?;
         let mut block = Vec::new();
-        while !self.check(&Token::RBrace) && !self.is_at_end() {
+        while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
             block.push(self.parse_statement()?);
         }
-        self.consume(Token::RBrace, "Expect '}' after block")?;
+        self.consume(TokenKind::RBrace, "Expect '}' after block")?;
         Ok(json!(block))
     }
 
     fn parse_var(&mut self) -> Result<Value, String> {
-        self.advance(); // Mange 'var'
+        let line = self.current_line();
+        self.advance(); 
 
-        // --- CAS 1 : Déstructuration de Liste : var [x, y] = ... ---
-        if self.match_token(Token::LBracket) {
+        if self.match_token(TokenKind::LBracket) {
             let mut vars = Vec::new();
-            
-            // 1. Lire la liste des variables cibles [a, b, c]
-            if !self.check(&Token::RBracket) {
+            if !self.check(&TokenKind::RBracket) {
                 loop {
-                    if let Token::Identifier(n) = self.advance() {
+                    if let TokenKind::Identifier(n) = &self.advance().kind {
                         vars.push(n.clone());
                     } else {
-                        return Err("Expect variable name in destructuring".into());
+                        return Err(format!("Expect variable name in destructuring (Line {})", line));
                     }
-                    if !self.match_token(Token::Comma) { break; }
+                    if !self.match_token(TokenKind::Comma) { break; }
                 }
             }
-            self.consume(Token::RBracket, "Expect ']' after var list")?;
-            self.consume(Token::Eq, "Expect '=' after destructuring list")?;
+            self.consume(TokenKind::RBracket, "Expect ']'")?;
+            self.consume(TokenKind::Eq, "Expect '='")?;
             
-            // 2. Lire l'expression source (la liste à déballer)
             let expr = self.parse_expression()?;
             
-            // 3. Génération du code (Desugaring)
             let mut instructions = Vec::new();
-            
-            // On utilise un nom unique pour stocker la liste temporairement
-            // (pour éviter d'évaluer l'expression plusieurs fois)
             let temp_name = format!("__destruct_temp_{}", vars.len()); 
             
-            // Instruction A: var __temp = expr
-            instructions.push(json!(["set", temp_name, null, expr]));
+            instructions.push(json!(["set", line, temp_name, null, expr]));
             
-            // Instruction B...N: var x = __temp.at(0), var y = __temp.at(1)...
             for (i, var_name) in vars.iter().enumerate() {
-                // Construction de l'appel : __temp.at(i)
                 let access = json!([
                     "call_method", 
                     ["get", temp_name], 
                     "at", 
                     [json!(i as i64)]
                 ]);
-                
-                // Instruction: set var_name = __temp.at(i)
-                instructions.push(json!(["set", var_name, null, access]));
+                instructions.push(json!(["set", line, var_name, null, access]));
             }
             
-            // ASTUCE : On retourne un bloc "if (true)" contenant nos instructions
-            // Cela permet de retourner une seule "Value" au parser principal
-            // tout en exécutant plusieurs lignes.
-            return Ok(json!(["if", json!(true), instructions]));
+            return Ok(json!(["if", line, json!(true), instructions]));
         }
 
-        // --- CAS 2 : Variable Classique : var x: type = ... ---
-        let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect var name".into()); };
-        
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Expect var name".into()); };
         let type_annot = self.parse_type_annotation()?; 
-
-        let expr = if self.match_token(Token::Eq) {
-            self.parse_expression()?
-        } else {
-            json!(null)
-        };
+        let expr = if self.match_token(TokenKind::Eq) { self.parse_expression()? } else { json!(null) };
         
-        Ok(json!(["set", name, type_annot, expr]))
+        Ok(json!(["set", line, name, type_annot, expr]))
     }
 
     fn parse_type_annotation(&mut self) -> Result<Option<String>, String> {
-        if self.match_token(Token::Colon) {
-            if let Token::Identifier(t) = self.advance() {
+        if self.match_token(TokenKind::Colon) {
+            if let TokenKind::Identifier(t) = &self.advance().kind {
                 Ok(Some(t.clone()))
             } else {
-                Err("Expect type name after ':'".into())
+                Err(format!("Expect type name after ':' (Line {})", self.current_line()))
             }
         } else {
             Ok(None)
@@ -286,288 +247,231 @@ impl Parser {
     }
 
     fn parse_print(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
         self.advance();
         let expr = self.parse_expression()?;
-        Ok(json!(["print", expr]))
+        Ok(json!(["print", line, expr]))
+    }
+
+    fn parse_return(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
+        self.advance();
+        let expr = self.parse_expression()?;
+        Ok(json!(["return", line, expr]))
     }
 
     fn parse_input(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
         self.advance();
-        let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect var name".into()); };
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Expect name".into()); };
         let prompt = self.parse_expression()?;
-        Ok(json!(["input", name, prompt]))
+        Ok(json!(["input", line, name, prompt]))
     }
 
     fn parse_import(&mut self) -> Result<Value, String> {
-        self.advance(); // Eat 'import' keyword
-
-        // We expect a StringLiteral containing the file path
-        let path = match self.advance() {
-            Token::StringLiteral(s) => s.clone(),
-            _ => return Err("Expect file path (string) after 'import'".into()),
+        let line = self.current_line();
+        self.advance();
+        let path = match &self.advance().kind {
+            TokenKind::StringLiteral(s) => s.clone(),
+            _ => return Err("Expect path".into()),
         };
-
-        // Output JSON: ["import", "path/to/file.ext"]
-        Ok(json!(["import", path]))
+        Ok(json!(["import", line, path]))
     }
 
     fn parse_try(&mut self) -> Result<Value, String> {
-        self.advance(); // Mange 'try'
-        
+        let line = self.current_line();
+        self.advance();
         let try_body = self.parse_block()?;
-        
-        self.consume(Token::Catch, "Expect 'catch' after try block")?;
-        self.consume(Token::LParen, "Expect '(' after catch")?;
-        
-        let error_var = if let Token::Identifier(n) = self.advance() {
-            n.clone()
-        } else {
-            return Err("Expect error variable name".into());
-        };
-        
-        self.consume(Token::RParen, "Expect ')' after catch variable")?;
-        
+        self.consume(TokenKind::Catch, "Expect catch")?;
+        self.consume(TokenKind::LParen, "(")?;
+        let err_var = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Expect error var".into()); };
+        self.consume(TokenKind::RParen, ")")?;
         let catch_body = self.parse_block()?;
-        
-        // Format JSON: ["try", [try_body], "err_var_name", [catch_body]]
-        Ok(json!(["try", try_body, error_var, catch_body]))
+        Ok(json!(["try", line, try_body, err_var, catch_body]))
     }
 
     fn parse_switch(&mut self) -> Result<Value, String> {
-        self.advance(); // Eat 'switch'
-        self.consume(Token::LParen, "Expect '(' after switch")?;
-        let value = self.parse_expression()?;
-        self.consume(Token::RParen, "Expect ')' after value")?;
-        self.consume(Token::LBrace, "Expect '{' to start switch block")?;
-
+        let line = self.current_line();
+        self.advance();
+        self.consume(TokenKind::LParen, "(")?;
+        let val = self.parse_expression()?;
+        self.consume(TokenKind::RParen, ")")?;
+        self.consume(TokenKind::LBrace, "{")?;
+        
         let mut cases = Vec::new();
-        let mut default_body = Vec::new();
-
-        while !self.check(&Token::RBrace) && !self.is_at_end() {
-            if self.match_token(Token::Case) {
-                // Case definition: case expr:
-                let case_val = self.parse_expression()?;
-                self.consume(Token::Colon, "Expect ':' after case value")?;
-                
-                // Read instructions until the next 'case', 'default', or '}'
+        let mut default = Vec::new();
+        
+        while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
+            if self.match_token(TokenKind::Case) {
+                let c_val = self.parse_expression()?;
+                self.consume(TokenKind::Colon, ":")?;
                 let mut body = Vec::new();
-                while !self.check(&Token::Case) && !self.check(&Token::Default) && !self.check(&Token::RBrace) {
+                while !self.check(&TokenKind::Case) && !self.check(&TokenKind::Default) && !self.check(&TokenKind::RBrace) {
                     body.push(self.parse_statement()?);
                 }
-                
-                // Add to cases list
-                // Format: [case_val, [instructions]]
-                cases.push(json!([case_val, body]));
-
-            } else if self.match_token(Token::Default) {
-                self.consume(Token::Colon, "Expect ':' after default")?;
-                
-                while !self.check(&Token::Case) && !self.check(&Token::Default) && !self.check(&Token::RBrace) {
-                    default_body.push(self.parse_statement()?);
+                cases.push(json!([c_val, body]));
+            } else if self.match_token(TokenKind::Default) {
+                self.consume(TokenKind::Colon, ":")?;
+                while !self.check(&TokenKind::Case) && !self.check(&TokenKind::Default) && !self.check(&TokenKind::RBrace) {
+                    default.push(self.parse_statement()?);
                 }
             } else {
-                return Err(format!("Unexpected token inside switch: {:?}", self.peek()));
+                return Err("Unexpected in switch".into());
             }
         }
-
-        self.consume(Token::RBrace, "Expect '}' to end switch block")?;
-
-        // JSON AST: ["switch", value_expr, [[case1_val, body], ...], [default_body]]
-        Ok(json!(["switch", value, cases, default_body]))
+        self.consume(TokenKind::RBrace, "}")?;
+        
+        Ok(json!(["switch", line, val, cases, default]))
     }
 
     fn parse_namespace(&mut self) -> Result<Value, String> {
-        self.advance(); // Eat 'namespace'
-        
-        // 1. Get the namespace name
-        let name = if let Token::Identifier(n) = self.advance() {
-            n.clone()
-        } else {
-            return Err("Expect namespace name".into());
-        };
-        
-        // 2. Parse the block content
+        let line = self.current_line();
+        self.advance();
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Ns Name".into()); };
         let body = self.parse_block()?;
-        
-        // JSON: ["namespace", "Name", [instructions]]
-        Ok(json!(["namespace", name, body]))
+        Ok(json!(["namespace", line, name, body]))
     }
 
     fn parse_decorated_function(&mut self) -> Result<Value, String> {
-        // 1. On mange le '@'
-        self.advance();
+        let line = self.current_line();
+        self.advance(); // @
+        let deco_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Deco Name".into()); };
+        self.consume(TokenKind::Func, "Func")?;
+        let func_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Func Name".into()); };
         
-        // 2. On récupère le nom du décorateur (ex: "log")
-        let decorator_name = if let Token::Identifier(n) = self.advance() {
-            n.clone()
-        } else {
-            return Err("Expect decorator name after '@'".into());
-        };
-
-        // 3. On s'attend à trouver une fonction juste après
-        self.consume(Token::Func, "Expect 'func' after decorator")?;
-        
-        // 4. On parse le nom de la fonction cible (ex: "dire_bonjour")
-        let func_name = if let Token::Identifier(n) = self.advance() {
-            n.clone()
-        } else {
-            return Err("Expect function name".into());
-        };
-
-        // 5. On parse les paramètres et le corps (comme une lambda)
-        self.consume(Token::LParen, "Expect '('")?;
+        self.consume(TokenKind::LParen, "(")?;
         let mut params = Vec::new();
-        if !self.check(&Token::RParen) {
+        if !self.check(&TokenKind::RParen) {
             loop {
-                if let Token::Identifier(p) = self.advance() { params.push(p.clone()); }
-                if !self.match_token(Token::Comma) { break; }
+                if let TokenKind::Identifier(p) = &self.advance().kind { params.push(p.clone()); }
+                if !self.match_token(TokenKind::Comma) { break; }
             }
         }
-        self.consume(Token::RParen, "Expect ')'")?;
+        self.consume(TokenKind::RParen, ")")?;
         let body = self.parse_block()?;
-
-        // 6. Construction de l'AST équivalent à :
-        // var func_name = decorator_name( func(params){ body } )
         
         let lambda = json!(["lambda", params, body]);
-        let decorator_var = json!(["get", decorator_name]);
+        let deco_var = json!(["get", deco_name]);
+        let call = json!(["call", deco_var, [lambda]]);
         
-        // L'appel : decorator(lambda)
-        let call_expr = json!(["call", decorator_var, [lambda]]);
-        
-        // L'assignation : var func_name = ...
-        Ok(json!(["set", func_name, call_expr]))
+        Ok(json!(["set", line, func_name, null, call]))
+    }
+
+    fn parse_params_list(&mut self) -> Result<Value, String> {
+        self.consume(TokenKind::LParen, "(")?;
+        let mut params = Vec::new();
+        if !self.check(&TokenKind::RParen) {
+            loop {
+                if let TokenKind::Identifier(p) = &self.advance().kind {
+                    let p_name = p.clone();
+                    let p_type = self.parse_type_annotation()?;
+                    params.push(json!([p_name, p_type]));
+                }
+                if !self.match_token(TokenKind::Comma) { break; }
+            }
+        }
+        self.consume(TokenKind::RParen, ")")?;
+        Ok(json!(params))
     }
 
     fn parse_if(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
         self.advance();
-        self.consume(Token::LParen, "Expect '('")?;
-        let condition = self.parse_expression()?;
-        self.consume(Token::RParen, "Expect ')'")?;
+        self.consume(TokenKind::LParen, "(")?;
+        let cond = self.parse_expression()?;
+        self.consume(TokenKind::RParen, ")")?;
+        let true_blk = self.parse_block()?;
+        let mut false_blk = json!([]);
         
-        let true_block = self.parse_block()?;
-        let mut false_block = json!([]);
-
-        if self.match_token(Token::Else) {
-            if self.check(&Token::If) {
-                false_block = json!([self.parse_if()?]);
+        if self.match_token(TokenKind::Else) {
+            if self.check(&TokenKind::If) {
+                false_blk = json!([self.parse_if()?]);
             } else {
-                false_block = self.parse_block()?;
+                false_blk = self.parse_block()?;
             }
         }
         
-        // Si false_block est vide, on renvoie une liste à 3 éléments, sinon 4
-        if false_block.as_array().unwrap().is_empty() {
-             Ok(json!(["if", condition, true_block]))
+        if false_blk.as_array().unwrap().is_empty() {
+            Ok(json!(["if", line, cond, true_blk]))
         } else {
-             Ok(json!(["if", condition, true_block, false_block]))
+            Ok(json!(["if", line, cond, true_blk, false_blk]))
         }
     }
 
     fn parse_while(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
         self.advance();
-        self.consume(Token::LParen, "Expect '('")?;
+        self.consume(TokenKind::LParen, "(")?;
         let cond = self.parse_expression()?;
-        self.consume(Token::RParen, "Expect ')'")?;
+        self.consume(TokenKind::RParen, ")")?;
         let body = self.parse_block()?;
-        Ok(json!(["while", cond, body]))
+        Ok(json!(["while", line, cond, body]))
     }
 
     fn parse_for(&mut self) -> Result<Value, String> {
-        self.advance(); // Mange le mot-clé 'for'
-        self.consume(Token::LParen, "Expect '(' after for")?;
-        
-        // 1. Variable d'itération
-        let var_name = if let Token::Identifier(n) = self.advance() { 
-            n.clone() 
-        } else { 
-            return Err("Expect variable name in for loop".into()); 
-        };
-        
-        self.consume(Token::Comma, "Expect ',' after variable")?;
-        
-        // 2. Start
+        let line = self.current_line();
+        self.advance();
+        self.consume(TokenKind::LParen, "(")?;
+        let var = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("For var".into()); };
+        self.consume(TokenKind::Comma, ",")?;
         let start = self.parse_expression()?;
-        self.consume(Token::Comma, "Expect ',' after start")?;
-        
-        // 3. End
+        self.consume(TokenKind::Comma, ",")?;
         let end = self.parse_expression()?;
-        self.consume(Token::Comma, "Expect ',' after end")?;
-        
-        // 4. Step
+        self.consume(TokenKind::Comma, ",")?;
         let step = self.parse_expression()?;
-        
-        self.consume(Token::RParen, "Expect ')' after for arguments")?;
-        
-        // 5. Body
+        self.consume(TokenKind::RParen, ")")?;
         let body = self.parse_block()?;
         
-        // Génère l'instruction JSON que le runtime Rust attend :
-        // ["for_range", "var_name", start, end, step, [body]]
-        Ok(json!(["for_range", var_name, start, end, step, body]))
+        Ok(json!(["for_range", line, var, start, end, step, body]))
     }
 
     fn parse_class(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
         self.advance(); // Eat 'class'
-        let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect class name".into()); };
-        
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Class Name".into()); };
         let params = self.parse_params_list()?;
         
         let mut parent = Value::Null;
-        if self.match_token(Token::Extends) {
-            if let Token::Identifier(n) = self.advance() { parent = json!(n); }
+        if self.match_token(TokenKind::Extends) {
+            if let TokenKind::Identifier(n) = &self.advance().kind { parent = json!(n); }
         }
-
-        self.consume(Token::LBrace, "{")?;
-        let mut methods = serde_json::Map::new();
         
-        while !self.check(&Token::RBrace) && !self.is_at_end() {
-            // Method definition: name(params) { body }
-            let m_name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect method name".into()); };
+        self.consume(TokenKind::LBrace, "{")?;
+        let mut methods = serde_json::Map::new();
+        while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
+            let m_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Method Name".into()); };
             let m_params = self.parse_params_list()?;
             let m_body = self.parse_block()?;
-            
-            // Format for AST: [params, body]
             methods.insert(m_name, json!([m_params, m_body]));
         }
-        self.consume(Token::RBrace, "}")?;
-
+        self.consume(TokenKind::RBrace, "}")?;
+        
         if parent.is_null() {
-            Ok(json!(["class", name, params, methods]))
+            Ok(json!(["class", line, name, params, methods]))
         } else {
-            Ok(json!(["class", name, params, methods, parent]))
+            Ok(json!(["class", line, name, params, methods, parent]))
         }
-    }
-
-    fn parse_return(&mut self) -> Result<Value, String> {
-        self.advance();
-        let expr = self.parse_expression()?;
-        Ok(json!(["return", expr]))
     }
 
     fn parse_func(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
         self.advance();
-        let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect func name".into()); };
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Func Name".into()); };
         
-        // Params contient maintenant [[name, type], [name, type]...]
         let params = self.parse_params_list()?;
-
+        
         let mut ret_type = Value::Null;
-        if self.match_token(Token::Arrow) {
-             if let Token::Identifier(t) = self.advance() {
+        if self.match_token(TokenKind::Arrow) {
+             if let TokenKind::Identifier(t) = &self.advance().kind {
                  ret_type = json!(t);
-             } else {
-                 return Err("Expect return type after '->'".into());
              }
         }
-
         let body = self.parse_block()?;
-
-        Ok(json!(["function", name, params, ret_type, body]))
+        
+        Ok(json!(["function", line, name, params, ret_type, body]))
     }
 
-    // --- Expressions (Pratt Parsing simplifié ou Recursive Descent) ---
-    // Pour simplifier, on fait: Logic > Additive > Multiplicative > Primary
+    // --- Expression Parsing ---
 
     fn parse_expression(&mut self) -> Result<Value, String> {
         self.parse_logical_or()
@@ -575,7 +479,7 @@ impl Parser {
 
     fn parse_logical_or(&mut self) -> Result<Value, String> {
         let mut left = self.parse_logical_and()?;
-        while self.match_token(Token::Or) {
+        while self.match_token(TokenKind::Or) {
             let right = self.parse_logical_and()?;
             left = json!(["||", left, right]);
         }
@@ -584,21 +488,20 @@ impl Parser {
 
     fn parse_logical_and(&mut self) -> Result<Value, String> {
         let mut left = self.parse_equality()?;
-        while self.match_token(Token::And) {
+        while self.match_token(TokenKind::And) {
             let right = self.parse_equality()?;
             left = json!(["&&", left, right]);
         }
         Ok(left)
     }
 
-    // Renomme ton ancien "parse_logic" en "parse_equality" et ajoute !=
     fn parse_equality(&mut self) -> Result<Value, String> {
-        let mut left = self.parse_relational()?; // Appel vers comparaison
-        while let Token::EqEq | Token::Neq = self.peek() {
-            let op = match self.advance() {
-                Token::EqEq => "==",
-                Token::Neq => "!=",
-                _ => unreachable!(),
+        let mut left = self.parse_relational()?;
+        while let TokenKind::EqEq | TokenKind::Neq = self.peek() {
+            let op = match self.advance().kind {
+                TokenKind::EqEq => "==",
+                TokenKind::Neq => "!=",
+                _ => unreachable!()
             };
             let right = self.parse_relational()?;
             left = json!([op, left, right]);
@@ -606,15 +509,14 @@ impl Parser {
         Ok(left)
     }
 
-    // Nouvelle fonction pour <, >, <=, >=
     fn parse_relational(&mut self) -> Result<Value, String> {
         let mut left = self.parse_bitwise()?;
-        while let Token::Lt | Token::Gt | Token::LtEq | Token::GtEq = self.peek() {
-             let op = match self.advance() {
-                Token::Lt => "<",
-                Token::Gt => ">",
-                Token::LtEq => "<=",
-                Token::GtEq => ">=",
+        while let TokenKind::Lt | TokenKind::Gt | TokenKind::LtEq | TokenKind::GtEq = self.peek() {
+             let op = match self.advance().kind {
+                TokenKind::Lt => "<",
+                TokenKind::Gt => ">",
+                TokenKind::LtEq => "<=",
+                TokenKind::GtEq => ">=",
                 _ => unreachable!(),
             };
             let right = self.parse_bitwise()?;
@@ -625,14 +527,13 @@ impl Parser {
 
     fn parse_bitwise(&mut self) -> Result<Value, String> {
         let mut left = self.parse_additive()?;
-        
-        while let Token::BitAnd | Token::BitOr | Token::BitXor | Token::ShiftLeft | Token::ShiftRight = self.peek() {
-            let op = match self.advance() {
-                Token::BitAnd => "&",
-                Token::BitOr => "|",
-                Token::BitXor => "^",
-                Token::ShiftLeft => "<<",
-                Token::ShiftRight => ">>",
+        while let TokenKind::BitAnd | TokenKind::BitOr | TokenKind::BitXor | TokenKind::ShiftLeft | TokenKind::ShiftRight = self.peek() {
+            let op = match self.advance().kind {
+                TokenKind::BitAnd => "&",
+                TokenKind::BitOr => "|",
+                TokenKind::BitXor => "^",
+                TokenKind::ShiftLeft => "<<",
+                TokenKind::ShiftRight => ">>",
                 _ => unreachable!()
             };
             let right = self.parse_additive()?;
@@ -643,10 +544,10 @@ impl Parser {
 
     fn parse_additive(&mut self) -> Result<Value, String> {
         let mut left = self.parse_multiplicative()?;
-        while let Token::Plus | Token::Minus = self.peek() {
-            let op = match self.advance() {
-                Token::Plus => "+",
-                Token::Minus => "-",
+        while let TokenKind::Plus | TokenKind::Minus = self.peek() {
+            let op = match self.advance().kind {
+                TokenKind::Plus => "+",
+                TokenKind::Minus => "-",
                 _ => unreachable!()
             };
             let right = self.parse_multiplicative()?;
@@ -657,17 +558,140 @@ impl Parser {
 
     fn parse_multiplicative(&mut self) -> Result<Value, String> {
         let mut left = self.parse_unary()?;
-        while let Token::Star | Token::Slash  | Token::Percent = self.peek() {
-            let op = match self.advance() {
-                Token::Star => "*",
-                Token::Slash => "/",
-                Token::Percent => "%",
+        while let TokenKind::Star | TokenKind::Slash | TokenKind::Percent = self.peek() {
+            let op = match self.advance().kind {
+                TokenKind::Star => "*",
+                TokenKind::Slash => "/",
+                TokenKind::Percent => "%",
                 _ => unreachable!()
             };
             let right = self.parse_unary()?;
             left = json!([op, left, right]);
         }
         Ok(left)
+    }
+
+    fn parse_unary(&mut self) -> Result<Value, String> {
+        if self.match_token(TokenKind::Bang) {
+            let right = self.parse_unary()?;
+            return Ok(json!(["!", right]));
+        }
+        if self.match_token(TokenKind::Minus) {
+            let right = self.parse_unary()?;
+            return Ok(json!(["-", json!(0), right]));
+        }
+        self.parse_primary()
+    }
+
+    fn parse_primary(&mut self) -> Result<Value, String> {
+        let mut expr = match self.peek() {
+            TokenKind::Integer(n) => { let v = *n; self.advance(); json!(v) },
+            TokenKind::Float(f) => { let v = *f; self.advance(); json!(v) },
+            TokenKind::StringLiteral(s) => { 
+                let raw = s.clone(); 
+                self.advance(); 
+                if raw.contains("${") { return self.parse_interpolated_string(&raw); }
+                json!(raw) 
+            },
+            TokenKind::True => { self.advance(); json!(true) },
+            TokenKind::False => { self.advance(); json!(false) },
+            TokenKind::Identifier(name) => { let n = name.clone(); self.advance(); json!(["get", n]) },
+            TokenKind::Func => {
+                self.advance();
+                self.consume(TokenKind::LParen, "(")?;
+                let mut params = Vec::new();
+                if !self.check(&TokenKind::RParen) {
+                    loop {
+                        if let TokenKind::Identifier(p) = &self.advance().kind { params.push(p.clone()); }
+                        if !self.match_token(TokenKind::Comma) { break; }
+                    }
+                }
+                self.consume(TokenKind::RParen, ")")?;
+                let body = self.parse_block()?;
+                json!(["lambda", params, body])
+            },
+            TokenKind::LParen => {
+                self.advance();
+                let e = self.parse_expression()?;
+                self.consume(TokenKind::RParen, ")")?;
+                e
+            },
+            TokenKind::LBracket => {
+                self.advance();
+                let mut els = Vec::new();
+                if !self.check(&TokenKind::RBracket) {
+                    loop { els.push(self.parse_expression()?); if !self.match_token(TokenKind::Comma) { break; } }
+                }
+                self.consume(TokenKind::RBracket, "]")?;
+                let mut ast = vec![json!("make_list")];
+                ast.extend(els);
+                json!(ast)
+            },
+            TokenKind::LBrace => {
+                self.advance();
+                let mut entries = Vec::new();
+                if !self.check(&TokenKind::RBrace) {
+                    loop {
+                        let key = match &self.advance().kind {
+                            TokenKind::StringLiteral(s) => s.clone(),
+                            TokenKind::Identifier(s) => s.clone(),
+                            _ => return Err("Dict Key".into())
+                        };
+                        self.consume(TokenKind::Colon, ":")?;
+                        let val = self.parse_expression()?;
+                        entries.push(json!([key, val]));
+                        if !self.match_token(TokenKind::Comma) { break; }
+                    }
+                }
+                self.consume(TokenKind::RBrace, "}")?;
+                let mut ast = vec![json!("make_dict")];
+                ast.extend(entries);
+                json!(ast)
+            },
+            TokenKind::New => {
+                self.advance();
+                let mut expr = if let TokenKind::Identifier(n) = &self.advance().kind { json!(["get", n.clone()]) } else { return Err("Class".into()); };
+                while self.match_token(TokenKind::Dot) {
+                    if let TokenKind::Identifier(m) = &self.advance().kind { expr = json!(["get_attr", expr, m.clone()]); }
+                }
+                self.consume(TokenKind::LParen, "(")?;
+                let mut args = Vec::new();
+                if !self.check(&TokenKind::RParen) {
+                    loop { args.push(self.parse_expression()?); if !self.match_token(TokenKind::Comma) { break; } }
+                }
+                self.consume(TokenKind::RParen, ")")?;
+                let mut new_cmd = vec![json!("new"), expr];
+                new_cmd.extend(args);
+                json!(new_cmd)
+            },
+            _ => return Err(format!("Unexpected token: {:?}", self.peek()))
+        };
+
+        loop {
+            if self.match_token(TokenKind::LParen) {
+                let mut args = Vec::new();
+                if !self.check(&TokenKind::RParen) {
+                    loop { args.push(self.parse_expression()?); if !self.match_token(TokenKind::Comma) { break; } }
+                }
+                self.consume(TokenKind::RParen, ")")?;
+                expr = json!(["call", expr, args]);
+            } else if self.match_token(TokenKind::Dot) {
+                let member = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Member".into()); };
+                if self.match_token(TokenKind::LParen) {
+                    let mut args = Vec::new();
+                    if !self.check(&TokenKind::RParen) {
+                        loop { args.push(self.parse_expression()?); if !self.match_token(TokenKind::Comma) { break; } }
+                    }
+                    self.consume(TokenKind::RParen, ")")?;
+                    expr = json!(["call_method", expr, member, args]);
+                } else {
+                    expr = json!(["get_attr", expr, member]);
+                }
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
     }
 
     fn parse_interpolated_string(&self, source: &str) -> Result<Value, String> {
@@ -699,10 +723,10 @@ impl Parser {
                             brace_count += 1;
                         }
 
-                        // Si on trouve ':' et qu'on est au niveau 1 (pas dans un dict imbriqué)
+                        // Si on trouve ':' et qu'on est au niveau 1
                         if code_char == ':' && brace_count == 1 && !found_colon {
                             found_colon = true;
-                            continue; // On ne l'ajoute pas au code, on switch de mode
+                            continue;
                         }
 
                         if found_colon {
@@ -721,8 +745,6 @@ impl Parser {
                     let expr = sub_parser.parse_expression()?;
                     
                     if !format_specifier.is_empty() {
-                        // Si format détecté -> Appelle fmt(expr, format)
-                        // AST: ["call", ["get", "fmt"], [expr, format_string]]
                         let fmt_call = json!(["call", ["get", "fmt"], [expr, json!(format_specifier)]]);
                         parts.push(fmt_call);
                     } else {
@@ -744,210 +766,5 @@ impl Parser {
         }
 
         Ok(final_expr)
-    }
-
-    fn parse_unary(&mut self) -> Result<Value, String> {
-        if self.match_token(Token::Bang) {
-            let right = self.parse_unary()?;
-            return Ok(json!(["!", right]));
-        }
-
-        if self.match_token(Token::Minus) {
-            // On a trouvé un '-' unaire (ex: -5 ou -x)
-            // On parse récursivement ce qui suit (pour gérer --5 par exemple)
-            let right = self.parse_unary()?;
-            
-            // ASTuce : On transforme "-x" en "0 - x"
-            // Comme ça, l'interpréteur utilise la soustraction qu'il connait déjà.
-            return Ok(json!(["-", json!(0), right]));
-        }
-
-        // Si ce n'est pas un opérateur unaire, c'est une expression primaire standard
-        self.parse_primary()
-    }
-
-    fn parse_primary(&mut self) -> Result<Value, String> {
-        let mut expr =  match self.peek() {
-            Token::Integer(n) => { let v = *n; self.advance(); json!(v) },
-            Token::Float(f) => { let v = *f; self.advance(); json!(v) },
-            Token::StringLiteral(s) => { 
-                let raw_string = s.clone();
-                self.advance(); 
-                
-                // Check for interpolation marker "${"
-                if raw_string.contains("${") {
-                    return self.parse_interpolated_string(&raw_string);
-                }
-
-                return Ok(json!(raw_string));
-             },
-            
-            Token::True => { self.advance(); json!(true) },
-            Token::False => { self.advance(); json!(false) },
-
-            Token::Identifier(name) => {
-                let name = name.clone();
-                self.advance();
-                json!(["get", name])
-            },
-
-            Token::Func => {
-                self.advance(); // Eat 'func'
-                self.consume(Token::LParen, "Expect '('")?;
-                // Réutilisation de ta logique de parsing de params (astuce: extraire parse_params en helper si besoin, ou copier la logique ici)
-                let mut params = Vec::new();
-                if !self.check(&Token::RParen) {
-                    loop {
-                        if let Token::Identifier(p) = self.advance() { params.push(p.clone()); }
-                        if !self.match_token(Token::Comma) { break; }
-                    }
-                }
-                self.consume(Token::RParen, "Expect ')'")?;
-                let body = self.parse_block()?;
-                
-                // On retourne une expression de type Function
-                // JSON: ["lambda", [params], [body]]
-                json!(["lambda", params, body])
-            },
-
-            Token::LParen => {
-                self.advance();
-                let expr = self.parse_expression()?;
-                self.consume(Token::RParen, "Expect ')'")?;
-                expr
-            },
-            
-            Token::LBracket => {
-                self.advance(); // Mange le '['
-                let mut elements = Vec::new();
-                
-                if !self.check(&Token::RBracket) {
-                    loop {
-                        elements.push(self.parse_expression()?);
-                        if !self.match_token(Token::Comma) { break; }
-                    }
-                }
-                
-                self.consume(Token::RBracket, "Expect ']' after list")?;
-                
-                // IMPORTANT : On utilise un mot-clé spécial pour le runtime
-                let mut ast = vec![json!("make_list")];
-                ast.extend(elements);
-                json!(ast)
-            },
-
-            Token::LBrace => {
-                self.advance(); // Mange le '{'
-                let mut entries = Vec::new(); // Sera une liste de paires [key, value]
-                
-                if !self.check(&Token::RBrace) {
-                    loop {
-                        // Clé (String ou Identifiant)
-                        let key = match self.advance() {
-                            Token::StringLiteral(s) => s.clone(),
-                            Token::Identifier(s) => s.clone(),
-                            _ => return Err("Dict key must be string or identifier".into())
-                        };
-                        
-                        self.consume(Token::Colon, "Expect ':' after dict key")?;
-                        let value = self.parse_expression()?;
-                        
-                        entries.push(json!([key, value])); // On stocke la paire
-                        
-                        if !self.match_token(Token::Comma) { break; }
-                    }
-                }
-                
-                self.consume(Token::RBrace, "Expect '}' after dict")?;
-                
-                // Structure JSON intermédiaire : ["make_dict", [k, v], [k, v]...]
-                let mut ast = vec![json!("make_dict")];
-                ast.extend(entries);
-                json!(ast)
-            },
-            Token::New => {
-                self.advance(); // Mange 'new'
-                
-                // 1. On parse le nom de la classe.
-                // Attention : ça peut être "Chien" ou "Math.Vector2".
-                // On utilise parse_identifier_chain (logique simplifiée ici)
-                
-                let mut expr = if let Token::Identifier(n) = self.advance() {
-                    json!(["get", n.clone()])
-                } else {
-                    return Err("Expect class name after new".into());
-                };
-                
-                // On gère les points (Math.Vector2.SubClass...)
-                while self.match_token(Token::Dot) {
-                    if let Token::Identifier(member) = self.advance() {
-                        expr = json!(["get_attr", expr, member.clone()]);
-                    } else {
-                        return Err("Expect member name after dot".into());
-                    }
-                }
-
-                // 2. Les arguments ( ... )
-                self.consume(Token::LParen, "Expect '(' after class ref")?;
-                let mut args = Vec::new();
-                if !self.check(&Token::RParen) {
-                    loop {
-                        args.push(self.parse_expression()?);
-                        if !self.match_token(Token::Comma) { break; }
-                    }
-                }
-                self.consume(Token::RParen, "Expect ')'")?;
-                
-                // JSON: ["new", expression_cible, [args]]
-                let mut new_cmd = vec![json!("new"), expr];
-                new_cmd.extend(args);
-                json!(new_cmd)
-            },
-            _ => return Err(format!("Unexpected token in expression: {:?}", self.peek()))
-        };
-
-        loop {
-            if self.match_token(Token::LParen) {
-                // C'est un APPEL : expr(...)
-                let mut args = Vec::new();
-                if !self.check(&Token::RParen) {
-                    loop {
-                        args.push(self.parse_expression()?);
-                        if !self.match_token(Token::Comma) { break; }
-                    }
-                }
-                self.consume(Token::RParen, "Expect ')'")?;
-                // JSON: ["call", target_expr, [args]]
-                expr = json!(["call", expr, args]);
-                
-            } else if self.match_token(Token::Dot) {
-                // C'est un ACCÈS : expr.prop
-                let member = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect member name".into()); };
-                
-                // Petite subtilité pour les méthodes : obj.method()
-                // Ton ancien code gérait "call_method". 
-                // Avec les fonctions first-class, obj.method() est techniquement (obj.method)()
-                // Mais pour garder le support des méthodes natives (split, trim) qui ne sont pas des variables,
-                // gardons la détection "si suivi de ( alors call_method".
-                
-                if self.match_token(Token::LParen) {
-                    let mut args = Vec::new();
-                    if !self.check(&Token::RParen) {
-                        loop {
-                            args.push(self.parse_expression()?);
-                            if !self.match_token(Token::Comma) { break; }
-                        }
-                    }
-                    self.consume(Token::RParen, "Expect ')'")?;
-                    expr = json!(["call_method", expr, member, args]);
-                } else {
-                    expr = json!(["get_attr", expr, member]);
-                }
-            } else {
-                break;
-            }
-        }
-
-        Ok(expr)
     }
 }
