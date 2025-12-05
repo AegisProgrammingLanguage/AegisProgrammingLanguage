@@ -162,10 +162,26 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     return Ok(Expression::Variable(name.to_string()));
                 },
                 "lambda" => {
-                    // ["lambda", [params], [body]]
-                    let params = array[1].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+                    let params_json = array[1].as_array().ok_or("Params array")?;
+                    let mut params = Vec::new();
+                    
+                    // On gère la rétro-compatibilité (si ancien format string) ou nouveau format [name, type]
+                    for p in params_json {
+                        if let Some(name) = p.as_str() {
+                            // Ancien format sans type
+                            params.push((name.to_string(), None));
+                        } else if let Some(pair) = p.as_array() {
+                            // Nouveau format avec type
+                            let name = pair[0].as_str().unwrap().to_string();
+                            let typ = pair[1].as_str().map(|s| s.to_string());
+                            params.push((name, typ));
+                        }
+                    }
+
                     let body = parse_block(&array[2])?;
-                    return Ok(Expression::Function { params, body });
+                    
+                    // On retourne Expression::Function
+                    return Ok(Expression::Function { params, ret_type: None, body });
                 },
                 "call" => {
                     // ["call", target_expr, [args]]
@@ -252,11 +268,11 @@ pub fn parse_instruction(json_instr: &JsonValue) -> Result<Instruction, String> 
 
     match command {
         "set" => {
-            // ["set", "name", expr]
-            let name = array.get(1).and_then(|v| v.as_str()).ok_or("Set attend un nom de variable")?.to_string();
-            let expr = parse_expression(&array[2])?;
-            // Pas de Box ici selon votre ast.rs précédent : Set(String, Expression)
-            Ok(Instruction::Set(name, expr)) 
+            let name = array[1].as_str().unwrap().to_string();
+            // Le type est à l'index 2 (String ou Null)
+            let type_annot = array[2].as_str().map(|s| s.to_string());
+            let expr = parse_expression(&array[3])?;
+            Ok(Instruction::Set(name, type_annot, expr))
         },
         "print" => {
             // ["print", expr]
@@ -318,19 +334,22 @@ pub fn parse_instruction(json_instr: &JsonValue) -> Result<Instruction, String> 
             Ok(Instruction::ExpressionStatement(expr))
         },
         "function" => {
-            // ["function", "name", ["arg1"], [body]]
-            let name = array[1].as_str().ok_or("Nom de fonction invalide")?.to_string();
+            let name = array[1].as_str().unwrap().to_string();
             
-            // Parsing des arguments
-            let params_array = array[2].as_array().ok_or("Params doit être un tableau")?;
+            let params_json = array[2].as_array().unwrap();
             let mut params = Vec::new();
-            for p in params_array {
-                params.push(p.as_str().ok_or("Param doit être string")?.to_string());
+            for p in params_json {
+                // Ici on attend le format tableau : ["nom", "type" ou null]
+                let pair = p.as_array().unwrap();
+                let p_name = pair[0].as_str().unwrap().to_string();
+                let p_type = pair[1].as_str().map(|s| s.to_string());
+                params.push((p_name, p_type));
             }
 
-            let body = parse_block(&array[3])?;
+            let ret_type = array[3].as_str().map(|s| s.to_string());
+            let body = parse_block(&array[4])?;
             
-            Ok(Instruction::Function { name, params, body })
+            Ok(Instruction::Function { name, params, ret_type, body })
         },
         "input" => {
             // ["input", "nom_var", "Texte du prompt"]

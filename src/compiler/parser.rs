@@ -62,7 +62,11 @@ impl Parser {
         let mut params = Vec::new();
         if !self.check(&Token::RParen) {
             loop {
-                if let Token::Identifier(p) = self.advance() { params.push(p.clone()); }
+                if let Token::Identifier(p) = self.advance() { 
+                    let p_name = p.clone();
+                    let p_type = self.parse_type_annotation()?; // Parse ": type"
+                    params.push(json!([p_name, p_type]));
+                }
                 if !self.match_token(Token::Comma) { break; }
             }
         }
@@ -205,12 +209,26 @@ impl Parser {
         self.advance(); // Eat 'var'
         let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect var name".into()); };
         
+        let type_annot = self.parse_type_annotation()?;
+
         let expr = if self.match_token(Token::Eq) {
             self.parse_expression()?
         } else {
             json!(null)
         };
-        Ok(json!(["set", name, expr]))
+        Ok(json!(["set", name, type_annot, expr]))
+    }
+
+    fn parse_type_annotation(&mut self) -> Result<Option<String>, String> {
+        if self.match_token(Token::Colon) {
+            if let Token::Identifier(t) = self.advance() {
+                Ok(Some(t.clone()))
+            } else {
+                Err("Expect type name after ':'".into())
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     fn parse_print(&mut self) -> Result<Value, String> {
@@ -477,18 +495,21 @@ impl Parser {
         self.advance();
         let name = if let Token::Identifier(n) = self.advance() { n.clone() } else { return Err("Expect func name".into()); };
         
-        self.consume(Token::LParen, "Expect '('")?;
-        let mut params = Vec::new();
-        if !self.check(&Token::RParen) {
-            loop {
-                if let Token::Identifier(p) = self.advance() { params.push(p.clone()); }
-                if !self.match_token(Token::Comma) { break; }
-            }
+        // Params contient maintenant [[name, type], [name, type]...]
+        let params = self.parse_params_list()?;
+
+        let mut ret_type = Value::Null;
+        if self.match_token(Token::Arrow) {
+             if let Token::Identifier(t) = self.advance() {
+                 ret_type = json!(t);
+             } else {
+                 return Err("Expect return type after '->'".into());
+             }
         }
-        self.consume(Token::RParen, "Expect ')'")?;
+
         let body = self.parse_block()?;
-        
-        Ok(json!(["function", name, params, body]))
+
+        Ok(json!(["function", name, params, ret_type, body]))
     }
 
     // --- Expressions (Pratt Parsing simplifié ou Recursive Descent) ---

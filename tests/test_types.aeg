@@ -1,0 +1,39 @@
+print "--- TEST TYPAGE ---"
+
+// 1. Variable typée
+var age: int = 25
+print "Age: " + age
+
+// Ceci doit planter :
+try {
+    var faux: int = "vingt"
+} catch (e) {
+    print "Erreur capturee : " + e
+}
+
+// 2. Fonction typée
+func division(a: float, b: float) -> float {
+    return a / b
+}
+
+print "Division : " + division(10.0, 2.0)
+
+// Ceci doit planter (args)
+try {
+    division(10, 2) // Ints au lieu de Floats
+} catch (e) {
+    print "Erreur args : " + e
+}
+
+// Ceci doit planter (return)
+func mauvais_retour() -> int {
+    return "pas un int"
+}
+
+try {
+    mauvais_retour()
+} catch (e) {
+    print "Erreur return : " + e
+}
+
+print "Test terminé."

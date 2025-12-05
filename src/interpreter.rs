@@ -194,8 +194,14 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
             Ok(Value::Dict(Rc::new(RefCell::new(d))))
         },
 
-        Expression::Function { params, body } => {
-            Ok(Value::Function(params.clone(), body.clone(), Some(env.clone())))
+        Expression::Function { params, ret_type, body } => {
+            // Value::Function attend 4 arguments maintenant
+            Ok(Value::Function(
+                params.clone(), 
+                ret_type.clone(), 
+                body.clone(), 
+                Some(env.clone())
+            ))
         },
 
         // Appels de méthodes (Copie optimisée de ton code précédent)
@@ -373,7 +379,7 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
             let target_val_result = evaluate(target_expr, env.clone());
             
             match target_val_result {
-                Ok(val @ Value::Function(_, _, _)) => { 
+                Ok(val @ Value::Function(..)) => {
                     apply_func(val, resolved_args, env)
                 },
                 
@@ -534,12 +540,39 @@ where F: Fn(f64, f64) -> bool {
     }
 }
 
+fn validate_type(val: &Value, expected_type: &str) -> bool {
+    match expected_type {
+        "any" => true, // Joker
+        "int" => matches!(val, Value::Integer(_)),
+        "float" => matches!(val, Value::Float(_)),
+        "string" => matches!(val, Value::String(_)),
+        "bool" => matches!(val, Value::Boolean(_)),
+        "list" => matches!(val, Value::List(_)),
+        "dict" => matches!(val, Value::Dict(_)),
+        "void" => matches!(val, Value::Null), // Void = Null
+        class_name => {
+            // Vérification d'instance de classe
+            if let Value::Instance(inst) = val {
+                return inst.borrow().class_def.name == class_name;
+            }
+            false
+        }
+    }
+}
+
 /// Exécute une instruction.
 /// Retourne `Ok(Some(Value))` si un `return` a été rencontré, `Ok(None)` sinon.
 pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, String> {
     match instr {
-        Instruction::Set(name, expr) => {
+        Instruction::Set(name, type_annot, expr) => {
             let val = evaluate(expr, env.clone())?;
+            
+            if let Some(t) = type_annot {
+                if !validate_type(&val, t) {
+                    return Err(format!("Type Error: Variable '{}' attendu {}, reçu {}", name, t, val));
+                }
+            }
+            
             env.borrow_mut().set_variable(name.clone(), val);
             Ok(None)
         },
@@ -629,8 +662,13 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
             Ok(None)
         },
 
-        Instruction::Function { name, params, body } => {
-            let func_value = Value::Function(params.clone(), body.clone(), Some(env.clone()));
+        Instruction::Function { name, params, ret_type, body } => {
+            let func_value = Value::Function(
+                params.clone(), 
+                ret_type.clone(), 
+                body.clone(), 
+                Some(env.clone())
+            );
             env.borrow_mut().set_variable(name.clone(), func_value);
             Ok(None)
         },
@@ -807,27 +845,41 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
 /// Helper pour exécuter une fonction Aegis (Lambda ou Nommée) depuis Rust
 fn apply_func(func_val: Value, args: Vec<Value>, current_env: SharedEnv) -> Result<Value, String> {
     match func_val {
-        Value::Function(params, body, closure_env) => {
-             // Vérification du nombre d'arguments
-             if args.len() != params.len() { 
-                return Err(format!("Arity mismatch: attendu {}, reçu {}", params.len(), args.len())); 
+        Value::Function(params_defs, ret_type_opt, body, closure_env) => {
+             
+             if args.len() != params_defs.len() { 
+                return Err(format!("Arity mismatch: attendu {}, reçu {}", params_defs.len(), args.len())); 
+             }
+             
+             let parent = closure_env.unwrap_or(current_env);
+             let child_env = Environment::new_child(parent);
+             
+             for ((p_name, p_type), val) in params_defs.iter().zip(args) {
+                 // 1. Vérification des types des arguments
+                 if let Some(t) = p_type {
+                     if !validate_type(&val, t) {
+                         return Err(format!("Type Error: Argument '{}' attendu {}, reçu {}", p_name, t, val));
+                     }
+                 }
+                 child_env.borrow_mut().set_variable(p_name.clone(), val.clone());
+             }
+             
+             let mut result = Value::Null;
+             for instr in body {
+                 if let Some(ret) = execute(&instr, child_env.clone())? {
+                     result = ret;
+                     break;
+                 }
              }
 
-             let parent_scope = closure_env.unwrap_or(current_env);
-             
-             // Création du scope de la fonction
-             let child_env = Environment::new_child(parent_scope);
-             
-             // Liaison des arguments aux paramètres
-             for (p, v) in params.iter().zip(args) {
-                 child_env.borrow_mut().set_variable(p.clone(), v);
+             // 2. Vérification du type de retour
+             if let Some(rt) = ret_type_opt {
+                 if !validate_type(&result, &rt) {
+                     return Err(format!("Type Error: Retour de fonction attendu {}, reçu {}", rt, result));
+                 }
              }
-             
-             // Exécution du corps
-             for instr in body {
-                 if let Some(ret) = execute(&instr, child_env.clone())? { return Ok(ret); }
-             }
-             Ok(Value::Null)
+
+             Ok(result)
         },
         _ => Err("L'argument n'est pas une fonction".into())
     }

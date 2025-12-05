@@ -5,8 +5,6 @@ use std::cell::RefCell;
 use crate::ast::nodes::ClassDefinition;
 use crate::ast::environment::SharedEnv;
 
-use crate::ast::Instruction;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstanceData {
     pub class_def: ClassDefinition, 
@@ -22,7 +20,7 @@ pub enum Value {
     List(Rc<RefCell<Vec<Value>>>),
     Dict(Rc<RefCell<HashMap<String, Value>>>),
     Instance(Rc<RefCell<InstanceData>>),
-    Function(Vec<String>, Vec<Instruction>, Option<SharedEnv>),
+    Function(Vec<(String, Option<String>)>, Option<String>, Vec<crate::ast::Instruction>, Option<SharedEnv>),
     Class(ClassDefinition),
     Null
 }
@@ -55,7 +53,10 @@ impl fmt::Display for Value {
                 let data = inst.borrow();
                 write!(f, "<Instance of {}>", data.class_def.name)
             },
-            Value::Function(params, _, _) => write!(f, "<Function({})>", params.join(", ")),
+            Value::Function(params, _, _, _) => {
+                let p_str: Vec<String> = params.iter().map(|p| p.0.clone()).collect();
+                write!(f, "<Function({})>", p_str.join(", "))
+            },
             Value::Class(c) => write!(f, "<Class {}>", c.name),
         }
     }

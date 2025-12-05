@@ -20,7 +20,8 @@ pub enum Token {
     MinusMinus, // --
     Namespace,
     BitAnd, BitOr, BitXor, ShiftLeft, ShiftRight,
-    At
+    At,
+    Arrow
 }
 
 pub struct Lexer<'a> {
@@ -67,10 +68,12 @@ impl<'a> Lexer<'a> {
                     if let Some(&'=') = self.chars.peek() {
                         self.chars.next();
                         tokens.push(Token::PlusEq);
-                    } else if let Some(&'+') = self.chars.peek() {
+                    } 
+                    else if let Some(&'+') = self.chars.peek() {
                         self.chars.next();
                         tokens.push(Token::PlusPlus);
-                    } else {
+                    } 
+                    else {
                         tokens.push(Token::Plus);
                     }
                 }
@@ -79,10 +82,16 @@ impl<'a> Lexer<'a> {
                     if let Some(&'=') = self.chars.peek() {
                         self.chars.next();
                         tokens.push(Token::MinusEq);
-                    } else if let Some(&'-') = self.chars.peek() {
+                    } 
+                    else if let Some(&'-') = self.chars.peek() {
                         self.chars.next();
                         tokens.push(Token::MinusMinus);
-                    } else {
+                    } 
+                    else if let Some(&'>') = self.chars.peek() {
+                        self.chars.next();
+                        tokens.push(Token::Arrow);
+                    }
+                    else {
                         tokens.push(Token::Minus);
                     }
                 }

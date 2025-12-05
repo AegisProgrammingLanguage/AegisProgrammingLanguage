@@ -14,7 +14,8 @@ pub enum Expression {
     Literal(Value),
     Variable(String),
     Function {
-        params: Vec<String>,
+        params: Vec<(String, Option<String>)>,
+        ret_type: Option<String>,
         body: Vec<Instruction>
     },
 
@@ -54,7 +55,7 @@ pub enum Expression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
-    Set(String, Expression),
+    Set(String, Option<String>, Expression),
     Print(Expression),
     If {
         condition: Expression,
@@ -76,7 +77,8 @@ pub enum Instruction {
     ExpressionStatement(Expression),
     Function {
         name: String,
-        params: Vec<String>,
+        params: Vec<(String, Option<String>)>,
+        ret_type: Option<String>,
         body: Vec<Instruction>
     },
     Input(String, Expression),
