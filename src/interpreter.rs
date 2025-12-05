@@ -24,7 +24,8 @@ fn is_truthy(val: &Value) -> bool {
         Value::Dict(d) => !d.borrow().is_empty(),
         Value::Instance(_) => true,
         Value::Function(..) => true,
-        Value::Class(_) => true
+        Value::Class(_) => true,
+        Value::Native(_) => true
     }
 }
 
@@ -289,21 +290,32 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                         Ok(d.borrow().get(&key).cloned().unwrap_or(Value::Null))
                     },
                     method_name => {
-                        // 1. On emprunte le dictionnaire
                         let dict = d.borrow();
                         
-                        // 2. On cherche si une clé correspond au nom de la méthode
+                        // On cherche la valeur dans le dictionnaire
                         if let Some(val) = dict.get(method_name) {
-                            // 3. Si c'est une fonction, on l'exécute !
+                            
+                            // CAS 1 : C'est une fonction Aegis (Lambda ou normale)
                             if let Value::Function(..) = val {
-                                // Important : on doit cloner val pour relâcher l'emprunt sur dict avant d'exécuter
                                 let func = val.clone();
-                                drop(dict); // On libère le borrow ici pour éviter les conflits si la fonction modifie le dict
+                                drop(dict);
                                 return apply_func(func, resolved, env.clone());
+                            }
+                            
+                            // CAS 2 : C'est une fonction Native (FFI) <--- AJOUT CRITIQUE
+                            if let Value::Native(key) = val {
+                                let key_str = key.clone();
+                                drop(dict); // On libère le dictionnaire
+                                
+                                // On récupère le pointeur Rust et on exécute
+                                let func_ptr = env.borrow().get_native(&key_str)
+                                    .ok_or(format!("Binding natif '{}' introuvable dans le registre", key_str))?;
+                                
+                                return func_ptr(resolved);
                             }
                         }
                         
-                        Err(format!("Méthode ou fonction '{}' introuvable dans le Dictionnaire/Namespace", method_name))
+                        Err(format!("Méthode '{}' introuvable dans le Namespace", method_name))
                     }
                 },
                 Value::String(s) => match method.as_str() {
@@ -386,6 +398,14 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
             match target_val_result {
                 Ok(val @ Value::Function(..)) => {
                     apply_func(val, resolved_args, env)
+                },
+                Ok(Value::Native(key)) => {
+                    // 1. On cherche la fonction Rust dans l'environnement
+                    let func_ptr = env.borrow().get_native(&key)
+                        .ok_or(format!("Fonction native '{}' non liée (Binding manquant)", key))?;
+                    
+                    // 2. On l'exécute directement !
+                    return func_ptr(resolved_args);
                 },
                 
                 // Gestion des Natives (qui ne sont pas des Value::Function stockées)
@@ -641,6 +661,7 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                                     Value::Dict(_) => "dict",
                                     Value::Function(..) => "function",
                                     Value::Class(_) => "class",
+                                    Value::Native(_) => "native",
                                     Value::Instance(ref i) => return Ok(Value::String(i.borrow().class_def.name.clone())),
                                 };
                                 Ok(Value::String(type_name.to_string()))
@@ -976,6 +997,12 @@ fn execute_internal(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>
             // 5. Register this Dict in the CURRENT environment under the namespace name
             env.borrow_mut().set_variable(name.clone(), ns_object);
             
+            Ok(None)
+        },
+        Instruction::Extern { name, params: _, registry_key } => {
+            // On crée une variable qui contient la référence "Native"
+            // Quand on l'appellera, on saura qu'il faut chercher 'registry_key'
+            env.borrow_mut().set_variable(name.clone(), Value::Native(registry_key.clone()));
             Ok(None)
         },
     }

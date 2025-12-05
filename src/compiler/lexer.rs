@@ -21,7 +21,8 @@ pub enum TokenKind {
     Namespace,
     BitAnd, BitOr, BitXor, ShiftLeft, ShiftRight,
     At,
-    Arrow
+    Arrow,
+    Extern
 }
 
 #[derive(Debug, Clone)]
@@ -319,6 +320,7 @@ impl<'a> Lexer<'a> {
             "try" => TokenKind::Try,
             "catch" => TokenKind::Catch,
             "namespace" => TokenKind::Namespace,
+            "extern" => TokenKind::Extern,
             _ => TokenKind::Identifier(s),
         };
 

@@ -1,0 +1,19 @@
+// On crée un module Aegis qui cache la complexité
+namespace Glfw {
+    // On bind les fonctions Aegis aux clés Rust
+    extern func init() = "glfw_init"
+    extern func createWindow(w, h) = "glfw_create_window"
+}
+
+print "--- TEST FFI (BINDINGS) ---"
+
+print "Demarrage du moteur..."
+var ok = Glfw.init()
+
+if (ok) {
+    print "Moteur pret."
+    var win = Glfw.createWindow(800, 600)
+    print "Fenetre creee : " + win
+} else {
+    print "Echec init."
+}

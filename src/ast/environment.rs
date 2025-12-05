@@ -7,11 +7,14 @@ use super::{ClassDefinition, Value};
 
 pub type SharedEnv = Rc<RefCell<Environment>>;
 
+pub type NativeFn = fn(Vec<Value>) -> Result<Value, String>;
+
 #[derive(Debug, PartialEq)]
 pub struct Environment {
     pub parent: Option<SharedEnv>, // Doit être pub pour l'accès
     pub variables: HashMap<String, Value>,
-    pub classes: HashMap<String, ClassDefinition>
+    pub classes: HashMap<String, ClassDefinition>,
+    pub natives: HashMap<String, NativeFn>
 }
 
 impl Environment {
@@ -19,7 +22,8 @@ impl Environment {
         Rc::new(RefCell::new(Environment {
             parent: None,
             variables: HashMap::new(),
-            classes: HashMap::new()
+            classes: HashMap::new(),
+            natives: HashMap::new()
         }))
     }
 
@@ -27,7 +31,8 @@ impl Environment {
         Rc::new(RefCell::new(Environment {
             parent: Some(parent),
             variables: HashMap::new(),
-            classes: HashMap::new()
+            classes: HashMap::new(),
+            natives: HashMap::new()
         }))
     }
 
@@ -54,6 +59,21 @@ impl Environment {
         }
         if let Some(parent) = &self.parent {
             return parent.borrow().get_variable(name);
+        }
+        None
+    }
+
+    // Helper pour enregistrer une fonction Rust
+    pub fn register_native(&mut self, key: &str, f: NativeFn) {
+        self.natives.insert(key.to_string(), f);
+    }
+    
+    pub fn get_native(&self, key: &str) -> Option<NativeFn> {
+        if let Some(f) = self.natives.get(key) {
+            return Some(*f);
+        }
+        if let Some(parent) = &self.parent {
+            return parent.borrow().get_native(key);
         }
         None
     }
