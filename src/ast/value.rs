@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+use crate::ast::Instruction;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstanceData {
     pub class_name: String,
@@ -19,6 +21,7 @@ pub enum Value {
     List(Rc<RefCell<Vec<Value>>>),
     Dict(Rc<RefCell<HashMap<String, Value>>>),
     Instance(Rc<RefCell<InstanceData>>),
+    Function(Vec<String>, Vec<Instruction>),
     Null
 }
 
@@ -49,7 +52,8 @@ impl fmt::Display for Value {
             Value::Instance(inst) => {
                 let data = inst.borrow();
                 write!(f, "<Instance of {}>", data.class_name)
-            }
+            },
+            Value::Function(params, _) => write!(f, "<Function({})>", params.join(", ")),
         }
     }
 }

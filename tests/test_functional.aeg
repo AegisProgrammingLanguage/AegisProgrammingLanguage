@@ -1,0 +1,29 @@
+print "--- TEST PROGRAMMATION FONCTIONNELLE ---"
+
+var nombres = [1, 2, 3, 4, 5]
+print "Liste originale : " + nombres
+
+// 1. MAP : Transformer les données
+// On multiplie tout par 10
+var dizaines = nombres.map(func(n) { 
+    return n * 10 
+})
+print "Apres map (*10) : " + dizaines
+
+// 2. FILTER : Filtrer les données
+// On ne garde que ceux supérieurs à 20
+var grands = dizaines.filter(func(n) {
+    return n > 20
+})
+print "Apres filter (>20) : " + grands
+
+// 3. FOR_EACH : Itérer
+print "Iteration :"
+grands.for_each(func(x) {
+    print " -> Element : " + x
+})
+
+// 4. Test combinaison (Map + Filter en une fois)
+// On prend [1,2,3], on ajoute 1 -> [2,3,4], on garde les pairs -> [2, 4]
+var res = [1, 2, 3].map(func(x){ return x+1 }).filter(func(x){ return (x % 2) == 0 })
+print "Chaine (Map+Filter) : " + res

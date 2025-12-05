@@ -13,6 +13,10 @@ pub struct ClassDefinition {
 pub enum Expression {
     Literal(Value),
     Variable(String),
+    Function {
+        params: Vec<String>,
+        body: Vec<Instruction>
+    },
 
     // Arithmetic
     Add(Box<Expression>, Box<Expression>),
@@ -35,7 +39,7 @@ pub enum Expression {
     Not(Box<Expression>),
 
     // Structures & Calls
-    FunctionCall(String, Vec<Expression>),
+    Call(Box<Expression>, Vec<Expression>),
     New(String, Vec<Expression>),
     GetAttr(Box<Expression>, String),
     CallMethod(Box<Expression>, String, Vec<Expression>),

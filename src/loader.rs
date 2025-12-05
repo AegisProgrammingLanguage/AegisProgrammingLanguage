@@ -136,17 +136,19 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     let name = array.get(1).and_then(|v| v.as_str()).ok_or("Get attend un nom de variable")?;
                     return Ok(Expression::Variable(name.to_string()));
                 },
-                // Appel de fonction (Expression)
+                "lambda" => {
+                    // ["lambda", [params], [body]]
+                    let params = array[1].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+                    let body = parse_block(&array[2])?;
+                    return Ok(Expression::Function { params, body });
+                },
                 "call" => {
-                    let func_name = array.get(1).and_then(|v| v.as_str()).ok_or("Call attend un nom")?;
-                    // Les arguments sont le reste du tableau après "call" et "name"
-                    // Si votre format est ["call", "name", arg1, arg2], on slice à partir de 2
-                    let args_json = &array[2..];
-                    let mut args = Vec::new();
-                    for arg in args_json {
-                        args.push(parse_expression(arg)?);
-                    }
-                    return Ok(Expression::FunctionCall(func_name.to_string(), args));
+                    // ["call", target_expr, [args]]
+                    let target = parse_expression(&array[1])?;
+                    // args est un tableau dans array[2]
+                    let args_arr = array[2].as_array().ok_or("Call args must be array")?;
+                    let args = args_arr.iter().map(parse_expression).collect::<Result<_,_>>()?;
+                    return Ok(Expression::Call(Box::new(target), args));
                 },
                 "new" => {
                     // ["new", "ClassName", arg1, arg2...]
@@ -165,12 +167,12 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                 },
                 "call_method" => {
                     let obj = parse_expression(&array[1])?;
-                    let method = array.get(2).and_then(|v| v.as_str()).ok_or("Method attend un nom")?.to_string();
-                    let args_json = &array[3..];
-                    let mut args = Vec::new();
-                    for arg in args_json {
-                        args.push(parse_expression(arg)?);
-                    }
+                    let method = array[2].as_str().ok_or("Method")?.to_string();
+                    
+                    // ["call_method", obj, "method", [arg1, arg2]]
+                    let args_arr = array[3].as_array().ok_or("Method args must be array")?;
+                    let args = args_arr.iter().map(parse_expression).collect::<Result<_,_>>()?;
+                    
                     return Ok(Expression::CallMethod(Box::new(obj), method, args));
                 },
 
@@ -199,19 +201,14 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
 
                 // Fallback pour les appels implicite (ex: ["print", ...])
                 cmd_name => {
-                    // Vérification : est-ce que c'est vraiment une fonction ou juste une liste de données ?
-                    // Dans notre architecture, tout ce qui commence par une string dans un tableau
-                    // est potentiellement du code.
-                    
-                    // On construit les arguments (tout ce qui est après l'index 0)
+                    // Fallback implicit call: print("hello") -> Call(Var("print"), ["hello"])
                     let args_json = &array[1..];
-                    let mut args = Vec::new();
-                    for arg in args_json {
-                        args.push(parse_expression(arg)?);
-                    }
+                    let args = args_json.iter().map(parse_expression).collect::<Result<_,_>>()?;
                     
-                    // On génère un FunctionCall
-                    return Ok(Expression::FunctionCall(cmd_name.to_string(), args));
+                    // On crée une Variable pour le nom de la commande
+                    let target = Expression::Variable(cmd_name.to_string());
+                    
+                    return Ok(Expression::Call(Box::new(target), args));
                 }
             }
         }

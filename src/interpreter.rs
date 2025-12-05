@@ -25,6 +25,7 @@ fn is_truthy(val: &Value) -> bool {
         Value::List(l) => !l.borrow().is_empty(),
         Value::Dict(d) => !d.borrow().is_empty(),
         Value::Instance(_) => true,
+        Value::Function(_, _) => true,
     }
 }
 
@@ -156,6 +157,10 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
             Ok(Value::Dict(Rc::new(RefCell::new(d))))
         },
 
+        Expression::Function { params, body } => {
+            Ok(Value::Function(params.clone(), body.clone()))
+        },
+
         // Appels de méthodes (Copie optimisée de ton code précédent)
         Expression::CallMethod(obj, method, args) => {
             let obj_val = evaluate(obj, env.clone())?;
@@ -179,6 +184,53 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                         }
                         
                         Ok(list[index].clone())
+                    },
+                    "map" => {
+                        // list.map(func(x) { return x * 2 })
+                        if resolved.len() != 1 { return Err("map attend 1 argument (fonction)".into()); }
+                        let callback = resolved[0].clone();
+                        
+                        let list = l.borrow();
+                        let mut new_list = Vec::new();
+                        
+                        for item in list.iter() {
+                            // On appelle la lambda pour chaque item
+                            let res = apply_func(callback.clone(), vec![item.clone()], env.clone())?;
+                            new_list.push(res);
+                        }
+                        
+                        Ok(Value::List(Rc::new(RefCell::new(new_list))))
+                    },
+
+                    "filter" => {
+                        // list.filter(func(x) { return x > 10 })
+                        if resolved.len() != 1 { return Err("filter attend 1 argument (fonction)".into()); }
+                        let callback = resolved[0].clone();
+                        
+                        let list = l.borrow();
+                        let mut new_list = Vec::new();
+                        
+                        for item in list.iter() {
+                            let res = apply_func(callback.clone(), vec![item.clone()], env.clone())?;
+                            // On garde l'élément si le résultat est "Vrai"
+                            if is_truthy(&res) {
+                                new_list.push(item.clone());
+                            }
+                        }
+                        
+                        Ok(Value::List(Rc::new(RefCell::new(new_list))))
+                    },
+                    
+                    "for_each" => {
+                         // list.for_each(func(x) { print x })
+                         if resolved.len() != 1 { return Err("for_each attend 1 argument (fonction)".into()); }
+                         let callback = resolved[0].clone();
+                         let list = l.borrow();
+                         
+                         for item in list.iter() {
+                             apply_func(callback.clone(), vec![item.clone()], env.clone())?;
+                         }
+                         Ok(Value::Null)
                     },
                     _ => Err("Method list unknown".into())
                 },
@@ -248,111 +300,136 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
         },
         
         // Appels de fonctions (Simple wrapper)
-        Expression::FunctionCall(name, args) => {
-             let mut resolved = Vec::new();
-             for a in args { resolved.push(evaluate(a, env.clone())?); }
-             
-             // Built-ins
-             match name.as_str() {
-                "str" => return Ok(Value::String(format!("{}", resolved[0]))),
-                "to_int" => return Ok(Value::Integer(resolved[0].as_int()?)),
-                "len" => { // Support générique len()
-                     match &resolved[0] {
-                         Value::String(s) => return Ok(Value::Integer(s.len() as i64)),
-                         Value::List(l) => return Ok(Value::Integer(l.borrow().len() as i64)),
-                         Value::Dict(d) => return Ok(Value::Integer(d.borrow().len() as i64)),
-                         _ => return Err("Type not supported for len()".into())
-                     }
-                 },
-                 // --- FILE I/O (Natif) ---
-                "io_read" => {
-                    if resolved.len() != 1 { return Err("io_read attend 1 argument (chemin)".into()); }
-                    let path = resolved[0].as_str()?;
+        Expression::Call(target_expr, args) => {
+            // 1. On évalue les arguments
+            let mut resolved_args = Vec::new();
+            for a in args { resolved_args.push(evaluate(a, env.clone())?); }
+
+            // 2. On évalue la cible (ex: "ma_fonction" -> Value::Function)
+            // Cas spécial : Si c'est un appel natif (print, len, etc.) qui n'est pas dans une variable
+            // Il faut gérer le fallback.
+            
+            let target_val_result = evaluate(target_expr, env.clone());
+            
+            match target_val_result {
+                Ok(Value::Function(params, body)) => {
+                    // C'est une fonction utilisateur !
+                    if resolved_args.len() != params.len() { return Err(format!("Arity mismatch: attendu {}, reçu {}", params.len(), resolved_args.len())); }
                     
-                    match fs::read_to_string(&path) {
-                        Ok(content) => return Ok(Value::String(content)),
-                        Err(_) => return Ok(Value::Null), // Retourne null si fichier introuvable
+                    let child_env = Environment::new_child(env.clone());
+                    for (p, v) in params.iter().zip(resolved_args) {
+                        child_env.borrow_mut().set_variable(p.clone(), v);
                     }
-                },
-                "io_write" => {
-                    if resolved.len() != 2 { return Err("io_write attend 2 arguments (chemin, contenu)".into()); }
-                    let path = resolved[0].as_str()?;
-                    let content = resolved[1].as_str()?; // Force la conversion en string
-                    
-                    fs::write(&path, content).map_err(|e| format!("Erreur écriture: {}", e))?;
-                    return Ok(Value::Boolean(true));
-                },
-                "io_append" => {
-                    if resolved.len() != 2 { return Err("io_append attend 2 arguments (chemin, contenu)".into()); }
-                    let path = resolved[0].as_str()?;
-                    let content = resolved[1].as_str()?;
-                    
-                    let mut file = OpenOptions::new()
-                        .write(true)
-                        .append(true)
-                        .create(true) // Crée le fichier s'il n'existe pas
-                        .open(&path)
-                        .map_err(|e| format!("Erreur ouverture fichier: {}", e))?;
-
-                    write!(file, "{}", content).map_err(|e| format!("Erreur append: {}", e))?;
-                    return Ok(Value::Boolean(true));
-                },
-                "io_exists" => {
-                    if resolved.len() != 1 { return Err("io_exists attend 1 argument (chemin)".into()); }
-                    let path = resolved[0].as_str()?;
-                    return Ok(Value::Boolean(Path::new(&path).exists()));
-                },
-                "io_delete" => {
-                    if resolved.len() != 1 { return Err("io_delete attend 1 argument".into()); }
-                    let path = resolved[0].as_str()?;
-                    if Path::new(&path).exists() {
-                        fs::remove_file(&path).map_err(|e| e.to_string())?;
-                        return Ok(Value::Boolean(true));
+                    for instr in body {
+                        if let Some(ret) = execute(&instr, child_env.clone())? { return Ok(ret); }
                     }
-                    return Ok(Value::Boolean(false));
+                    Ok(Value::Null)
                 },
-                // ------------------------
+                
+                // Gestion des Natives (qui ne sont pas des Value::Function stockées)
+                // Si l'évaluation échoue (variable inconnue) OU si ce n'est pas une fonction...
+                // On regarde si c'est un nom connu.
+                Err(_) | Ok(_) => {
+                    // On essaie de voir si target_expr est une Variable portant un nom natif
+                    if let Expression::Variable(name) = target_expr.as_ref() {
+                        match name.as_str() {
+                            "str" => return Ok(Value::String(format!("{}", resolved_args[0]))),
+                            "to_int" => return Ok(Value::Integer(resolved_args[0].as_int()?)),
+                            "len" => { // Support générique len()
+                                match &resolved_args[0] {
+                                    Value::String(s) => return Ok(Value::Integer(s.len() as i64)),
+                                    Value::List(l) => return Ok(Value::Integer(l.borrow().len() as i64)),
+                                    Value::Dict(d) => return Ok(Value::Integer(d.borrow().len() as i64)),
+                                    _ => return Err("Type not supported for len()".into())
+                                }
+                            },
+                            // --- FILE I/O (Natif) ---
+                            "io_read" => {
+                                if resolved_args.len() != 1 { return Err("io_read attend 1 argument (chemin)".into()); }
+                                let path = resolved_args[0].as_str()?;
+                                
+                                match fs::read_to_string(&path) {
+                                    Ok(content) => return Ok(Value::String(content)),
+                                    Err(_) => return Ok(Value::Null), // Retourne null si fichier introuvable
+                                }
+                            },
+                            "io_write" => {
+                                if resolved_args.len() != 2 { return Err("io_write attend 2 arguments (chemin, contenu)".into()); }
+                                let path = resolved_args[0].as_str()?;
+                                let content = resolved_args[1].as_str()?; // Force la conversion en string
+                                
+                                fs::write(&path, content).map_err(|e| format!("Erreur écriture: {}", e))?;
+                                return Ok(Value::Boolean(true));
+                            },
+                            "io_append" => {
+                                if resolved_args.len() != 2 { return Err("io_append attend 2 arguments (chemin, contenu)".into()); }
+                                let path = resolved_args[0].as_str()?;
+                                let content = resolved_args[1].as_str()?;
+                                
+                                let mut file = OpenOptions::new()
+                                    .write(true)
+                                    .append(true)
+                                    .create(true) // Crée le fichier s'il n'existe pas
+                                    .open(&path)
+                                    .map_err(|e| format!("Erreur ouverture fichier: {}", e))?;
 
-                // --- TIME ---
-                "time_now" => {
-                    let start = SystemTime::now();
-                    let since_the_epoch = start
-                        .duration_since(UNIX_EPOCH)
-                        .expect("Time went backwards");
-                    // On retourne des millisecondes pour être pratique
-                    return Ok(Value::Integer(since_the_epoch.as_millis() as i64));
-                },
-                // ------------------------
+                                write!(file, "{}", content).map_err(|e| format!("Erreur append: {}", e))?;
+                                return Ok(Value::Boolean(true));
+                            },
+                            "io_exists" => {
+                                if resolved_args.len() != 1 { return Err("io_exists attend 1 argument (chemin)".into()); }
+                                let path = resolved_args[0].as_str()?;
+                                return Ok(Value::Boolean(Path::new(&path).exists()));
+                            },
+                            "io_delete" => {
+                                if resolved_args.len() != 1 { return Err("io_delete attend 1 argument".into()); }
+                                let path = resolved_args[0].as_str()?;
+                                if Path::new(&path).exists() {
+                                    fs::remove_file(&path).map_err(|e| e.to_string())?;
+                                    return Ok(Value::Boolean(true));
+                                }
+                                return Ok(Value::Boolean(false));
+                            },
+                            // ------------------------
 
-                // --- RANDOM ---
-                "rand_int" => {
-                    if resolved.len() != 2 { return Err("rand_int attend 2 arguments (min, max)".into()); }
-                    let min = resolved[0].as_int()?;
-                    let max = resolved[1].as_int()?;
-                    
-                    if min >= max { return Err("min doit être inférieur à max".into()); }
-                    
-                    let mut rng = rand::thread_rng();
-                    let val = rng.gen_range(min..max); // [min, max[
-                    return Ok(Value::Integer(val));
-                },
-                "rand_float" => {
-                    let mut rng = rand::thread_rng();
-                    let val: f64 = rng.r#gen(); // 0.0 .. 1.0
-                    return Ok(Value::Float(val));
-                },
-                // ------------------------
+                            // --- TIME ---
+                            "time_now" => {
+                                let start = SystemTime::now();
+                                let since_the_epoch = start
+                                    .duration_since(UNIX_EPOCH)
+                                    .expect("Time went backwards");
+                                // On retourne des millisecondes pour être pratique
+                                return Ok(Value::Integer(since_the_epoch.as_millis() as i64));
+                            },
+                            // ------------------------
 
-                 _ => {}
-             }
+                            // --- RANDOM ---
+                            "rand_int" => {
+                                if resolved_args.len() != 2 { return Err("rand_int attend 2 arguments (min, max)".into()); }
+                                let min = resolved_args[0].as_int()?;
+                                let max = resolved_args[1].as_int()?;
+                                
+                                if min >= max { return Err("min doit être inférieur à max".into()); }
+                                
+                                let mut rng = rand::thread_rng();
+                                let val = rng.gen_range(min..max); // [min, max[
+                                return Ok(Value::Integer(val));
+                            },
+                            "rand_float" => {
+                                let mut rng = rand::thread_rng();
+                                let val: f64 = rng.r#gen(); // 0.0 .. 1.0
+                                return Ok(Value::Float(val));
+                            },
+                            // ------------------------
 
-             // Fonctions utilisateur
-             let func = env.borrow().get_function(name).ok_or(format!("Fonction {} inconnue", name))?;
-             let child = Environment::new_child(env.clone());
-             for (p, v) in func.params.iter().zip(resolved) { child.borrow_mut().set_variable(p.clone(), v); }
-             for i in func.body { if let Some(r) = execute(&i, child.clone())? { return Ok(r); } }
-             Ok(Value::Null)
-        }
+                            _ => Err(format!("'{}' n'est pas une fonction ou n'existe pas", name)) 
+                        }
+                    } else {
+                        Err("L'expression n'est pas appelable (pas une fonction)".into())
+                    }
+                }
+            }
+        },
     }
 }
 
@@ -463,7 +540,8 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
         },
 
         Instruction::Function { name, params, body } => {
-            env.borrow_mut().define_function(name.clone(), params.clone(), body.clone());
+            let func_value = Value::Function(params.clone(), body.clone());
+            env.borrow_mut().set_variable(name.clone(), func_value);
             Ok(None)
         },
 
@@ -607,5 +685,32 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
             
             Ok(None)
         },
+    }
+}
+
+/// Helper pour exécuter une fonction Aegis (Lambda ou Nommée) depuis Rust
+fn apply_func(func_val: Value, args: Vec<Value>, env: SharedEnv) -> Result<Value, String> {
+    match func_val {
+        Value::Function(params, body) => {
+             // Vérification du nombre d'arguments
+             if args.len() != params.len() { 
+                return Err(format!("Arity mismatch: attendu {}, reçu {}", params.len(), args.len())); 
+             }
+             
+             // Création du scope de la fonction
+             let child_env = Environment::new_child(env.clone());
+             
+             // Liaison des arguments aux paramètres
+             for (p, v) in params.iter().zip(args) {
+                 child_env.borrow_mut().set_variable(p.clone(), v);
+             }
+             
+             // Exécution du corps
+             for instr in body {
+                 if let Some(ret) = execute(&instr, child_env.clone())? { return Ok(ret); }
+             }
+             Ok(Value::Null)
+        },
+        _ => Err("L'argument n'est pas une fonction".into())
     }
 }

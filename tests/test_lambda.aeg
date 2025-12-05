@@ -1,0 +1,29 @@
+print "--- TEST LAMBDAS ---"
+
+// 1. Fonction stockée dans une variable
+var dire_bonjour = func(nom) {
+    print "Bonjour " + nom
+}
+
+dire_bonjour("Paul")
+
+// 2. Fonction d'ordre supérieur (Callback)
+func executer(f, val) {
+    print "J'execute la fonction..."
+    f(val)
+}
+
+executer(dire_bonjour, "Alice")
+
+// 3. Fonction anonyme immédiate
+executer(func(x) {
+    print "Je suis une lambda anonyme avec : " + x
+}, 42)
+
+// 4. Retourner une fonction (Factory) -- Note: Closure partielle (scope global uniquement pour l'instant)
+func createur_de_salutation() {
+    return func(n) { print "Salut " + n }
+}
+
+var s = createur_de_salutation()
+s("Bob")
