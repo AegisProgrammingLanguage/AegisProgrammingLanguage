@@ -85,6 +85,7 @@ impl Parser {
             Token::Input => self.parse_input(),
             Token::Break => { self.advance(); Ok(json!(["break"])) },
             Token::Import => self.parse_import(),
+            Token::Try => self.parse_try(),
             
             // Cas générique pour Identifiants (Variables, Appels, Attributs)
             Token::Identifier(_) => {
@@ -172,6 +173,28 @@ impl Parser {
 
         // Output JSON: ["import", "path/to/file.ext"]
         Ok(json!(["import", path]))
+    }
+
+    fn parse_try(&mut self) -> Result<Value, String> {
+        self.advance(); // Mange 'try'
+        
+        let try_body = self.parse_block()?;
+        
+        self.consume(Token::Catch, "Expect 'catch' after try block")?;
+        self.consume(Token::LParen, "Expect '(' after catch")?;
+        
+        let error_var = if let Token::Identifier(n) = self.advance() {
+            n.clone()
+        } else {
+            return Err("Expect error variable name".into());
+        };
+        
+        self.consume(Token::RParen, "Expect ')' after catch variable")?;
+        
+        let catch_body = self.parse_block()?;
+        
+        // Format JSON: ["try", [try_body], "err_var_name", [catch_body]]
+        Ok(json!(["try", try_body, error_var, catch_body]))
     }
 
     fn parse_if(&mut self) -> Result<Value, String> {

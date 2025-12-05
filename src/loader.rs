@@ -368,6 +368,18 @@ pub fn parse_instruction(json_instr: &JsonValue) -> Result<Instruction, String> 
                 .to_string();
             Ok(Instruction::Import(path))
         },
+        "try" => {
+            // ["try", [body], "var", [catch]]
+            let try_body = parse_block(&array[1])?;
+            let error_var = array[2].as_str().ok_or("Error var must be string")?.to_string();
+            let catch_body = parse_block(&array[3])?;
+            
+            Ok(Instruction::TryCatch { 
+                try_body, 
+                error_var, 
+                catch_body 
+            })
+        },
         _ => Err(format!("Instruction inconnue: {}", command)),
     }
 }

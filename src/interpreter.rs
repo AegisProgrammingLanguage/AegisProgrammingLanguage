@@ -537,5 +537,39 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
 
             Ok(None)
         },
+        Instruction::TryCatch { try_body, error_var, catch_body } => {
+            // 1. On essaie d'exécuter le bloc TRY instruction par instruction
+            let mut error_occurred = None;
+
+            // Note: On utilise un scope enfant pour le try si tu veux isoler les variables, 
+            // mais généralement try partage le scope parent. Restons simples pour l'instant (scope partagé).
+            for instr in try_body {
+                // L'astuce est ici : on utilise match au lieu de ? pour ne pas planter l'interpréteur
+                match execute(instr, env.clone()) {
+                    Ok(Some(ret)) => return Ok(Some(ret)), // Gestion du return dans un try
+                    Ok(None) => continue, // Tout va bien, instruction suivante
+                    Err(msg) => {
+                        // OUPS ! Une erreur. On la capture et on sort de la boucle du try
+                        error_occurred = Some(msg);
+                        break;
+                    }
+                }
+            }
+
+            // 2. Si une erreur a eu lieu, on exécute le CATCH
+            if let Some(msg) = error_occurred {
+                let catch_env = Environment::new_child(env.clone());
+                // On injecte le message d'erreur dans la variable définie (ex: "e")
+                catch_env.borrow_mut().set_variable(error_var.clone(), Value::String(msg));
+                
+                for instr in catch_body {
+                    if let Some(ret) = execute(instr, catch_env.clone())? {
+                        return Ok(Some(ret));
+                    }
+                }
+            }
+            
+            Ok(None)
+        },
     }
 }

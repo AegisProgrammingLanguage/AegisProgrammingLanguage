@@ -4,6 +4,7 @@ use std::str::Chars;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     True, False,
+    Try, Catch,
     Var, If, Else, While, For, Func, Return, Print, Input, Class, New, Extends, Import, Break, Switch, Case, Default,
     Identifier(String), StringLiteral(String), Integer(i64), Float(f64),
     Plus, Minus, Star, Slash, Percent,
@@ -135,6 +136,8 @@ impl<'a> Lexer<'a> {
             "default" => Token::Default,
             "true" => Token::True,
             "false" => Token::False,
+            "try" => Token::Try,
+            "catch" => Token::Catch,
             _ => Token::Identifier(s),
         }
     }

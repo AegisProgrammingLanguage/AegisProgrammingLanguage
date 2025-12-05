@@ -1,0 +1,42 @@
+import "stdlib/file.aeg"
+
+print "--- TEST TRY / CATCH ---"
+
+// Cas 1 : Erreur Mathématique
+print "Test 1: Division par zéro"
+try {
+    var a = 10
+    var b = 0
+    var c = a / b // Boum !
+    print "Ceci ne devrait pas s'afficher"
+} catch (err) {
+    print "✅ Erreur capturee : " + err
+}
+
+// Cas 2 : Erreur Fichier
+print ""
+print "Test 2: Lecture fichier inexistant"
+try {
+    // io_read ne plante pas (retourne null), mais io_write peut planter si dossier invalide
+    // ou forçons une erreur manuelle via une fonction inconnue ou autre logique
+    
+    // Essayons d'ouvrir un fichier qui n'existe pas en mode "append" sans create (si on avait cette option)
+    // Mais pour l'instant, faisons simple : provoquons une erreur de type
+    var x = "texte"
+    var y = x - 5 // Impossible de soustraire un int à une string -> Erreur
+} catch (e) {
+    print "✅ Erreur type capturee : " + e
+}
+
+// Cas 3 : Pas d'erreur
+print ""
+print "Test 3: Bloc sans erreur"
+try {
+    var ok = "Tout va bien"
+    print ok
+} catch (e) {
+    print "❌ Ceci ne doit pas s'afficher"
+}
+
+print ""
+print "Fin du programme (correctement atteint)"
