@@ -142,9 +142,22 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
             Ok(Value::Instance(Rc::new(RefCell::new(crate::ast::InstanceData { class_name: class_name.clone(), fields }))))
         },
         Expression::GetAttr(obj, attr) => {
-            if let Value::Instance(i) = evaluate(obj, env)? {
-                i.borrow().fields.get(attr).cloned().ok_or("Attribut introuvable".into())
-            } else { Err("Pas une instance".into()) }
+            let val = evaluate(obj, env.clone())?;
+            
+            match val {
+                // Cas 1 : Instance de classe (obj.prop)
+                Value::Instance(i) => {
+                    i.borrow().fields.get(attr).cloned().ok_or(format!("Attribut '{}' introuvable", attr))
+                },
+                
+                // Cas 2 : Dictionnaire (dict.key) - Sucre syntaxique très pratique !
+                Value::Dict(d) => {
+                    // On retourne Null si la clé n'existe pas, au lieu de planter
+                    Ok(d.borrow().get(attr).cloned().unwrap_or(Value::Null))
+                },
+                
+                _ => Err("Ce type ne supporte pas l'accès aux attributs (.)".into())
+            }
         },
         Expression::List(exprs) => {
             let mut vals = Vec::new();
@@ -239,6 +252,12 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                     "remove" => Ok(d.borrow_mut().remove(&resolved[0].clone().as_str()?).unwrap_or(Value::Null)),
                     "keys" => Ok(Value::List(Rc::new(RefCell::new(d.borrow().keys().map(|k| Value::String(k.clone())).collect())))),
                     "len" => Ok(Value::Integer(d.borrow().len() as i64)),
+                    "get" => {
+                        if resolved.len() != 1 { return Err("get attend 1 argument (clé)".into()); }
+                        let key = resolved[0].as_str()?;
+                        // Retourne la valeur ou Null si la clé n'existe pas
+                        Ok(d.borrow().get(&key).cloned().unwrap_or(Value::Null))
+                    },
                     _ => Err("Method dict unknown".into())
                 },
                 Value::String(s) => match method.as_str() {

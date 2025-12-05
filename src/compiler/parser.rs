@@ -93,39 +93,100 @@ impl Parser {
                 // 1. On parse l'expression complète (ex: "x", "this.nom", "obj.method()")
                 // Cela consomme les tokens correctement, y compris les points.
                 let expr = self.parse_expression()?;
-                
-                // 2. On regarde si c'est suivi d'un signe égal "=" (Assignation)
-                if self.match_token(Token::Eq) {
-                    let value = self.parse_expression()?;
+
+                match self.peek() {
+                    Token::Eq => {
+                        self.advance();
+                        let value = self.parse_expression()?;
                     
-                    // 3. On transforme l'expression de lecture en instruction d'écriture
-                    // On inspecte le JSON généré par parse_expression
-                    if let Some(arr) = expr.as_array() {
-                        let cmd = arr[0].as_str().unwrap_or("");
-                        
-                        // Cas 1: Variable simple ["get", "x"] -> ["set", "x", val]
-                        if cmd == "get" {
-                            let name = &arr[1];
-                            return Ok(json!(["set", name, value]));
+                        // 3. On transforme l'expression de lecture en instruction d'écriture
+                        // On inspecte le JSON généré par parse_expression
+                        if let Some(arr) = expr.as_array() {
+                            let cmd = arr[0].as_str().unwrap_or("");
+                            
+                            // Cas 1: Variable simple ["get", "x"] -> ["set", "x", val]
+                            if cmd == "get" {
+                                let name = &arr[1];
+                                return Ok(json!(["set", name, value]));
+                            }
+                            
+                            // Cas 2: Attribut ["get_attr", obj, "attr"] -> ["set_attr", obj, "attr", val]
+                            if cmd == "get_attr" {
+                                let obj = &arr[1];
+                                let attr = &arr[2];
+                                return Ok(json!(["set_attr", obj, attr, value]));
+                            }
                         }
                         
-                        // Cas 2: Attribut ["get_attr", obj, "attr"] -> ["set_attr", obj, "attr", val]
-                        if cmd == "get_attr" {
-                            let obj = &arr[1];
-                            let attr = &arr[2];
-                            return Ok(json!(["set_attr", obj, attr, value]));
-                        }
-                    }
+                        return self.convert_to_assignment(expr, value);
+                    },
+                    // Case: i++  =>  i = i + 1
+                    Token::PlusPlus => {
+                        self.advance();
+                        let one = json!(1);
+                        // We construct: expr = expr + 1
+                        let new_val = json!(["+", expr.clone(), one]);
+                        return self.convert_to_assignment(expr, new_val);
+                    },
+                    // Case: i--  =>  i = i - 1
+                    Token::MinusMinus => {
+                        self.advance();
+                        let one = json!(1);
+                        let new_val = json!(["-", expr.clone(), one]);
+                        return self.convert_to_assignment(expr, new_val);
+                    },
+                    // Case: x += 10  =>  x = x + 10
+                    Token::PlusEq => {
+                        self.advance();
+                        let val = self.parse_expression()?;
+                        let new_val = json!(["+", expr.clone(), val]);
+                        return self.convert_to_assignment(expr, new_val);
+                    },
+                    Token::MinusEq => {
+                        self.advance();
+                        let val = self.parse_expression()?;
+                        let new_val = json!(["-", expr.clone(), val]);
+                        return self.convert_to_assignment(expr, new_val);
+                    },
+                    Token::StarEq => {
+                        self.advance();
+                        let val = self.parse_expression()?;
+                        let new_val = json!(["*", expr.clone(), val]);
+                        return self.convert_to_assignment(expr, new_val);
+                    },
+                    Token::SlashEq => {
+                        self.advance();
+                        let val = self.parse_expression()?;
+                        let new_val = json!(["/", expr.clone(), val]);
+                        return self.convert_to_assignment(expr, new_val);
+                    },
                     
-                    return Err("Cible d'assignation invalide (doit être une variable ou un attribut)".to_string());
+                    // -----------------------------------------------
+                    
+                    _ => return Ok(expr) // Just an expression statement (like a function call)
                 }
-                
-                // Si pas de "=", c'était juste une expression (ex: appel de fonction)
-                Ok(expr)
             },
             
             _ => Err(format!("Unexpected token at start of statement: {:?}", self.peek())),
         }
+    }
+
+    // Helper to transform a getter expression into a setter instruction
+    fn convert_to_assignment(&self, target: Value, value: Value) -> Result<Value, String> {
+        if let Some(arr) = target.as_array() {
+            let cmd = arr[0].as_str().unwrap_or("");
+            
+            if cmd == "get" {
+                let name = &arr[1];
+                return Ok(json!(["set", name, value]));
+            }
+            if cmd == "get_attr" {
+                let obj = &arr[1];
+                let attr = &arr[2];
+                return Ok(json!(["set_attr", obj, attr, value]));
+            }
+        }
+        Err("Invalid assignment target".to_string())
     }
 
     fn parse_block(&mut self) -> Result<Value, String> {
@@ -451,6 +512,68 @@ impl Parser {
         Ok(left)
     }
 
+    fn parse_interpolated_string(&self, source: &str) -> Result<Value, String> {
+        let mut parts = Vec::new();
+        let mut current_text = String::new();
+        let mut chars = source.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            if c == '$' {
+                if let Some(&'{') = chars.peek() {
+                    chars.next(); // Eat '{'
+                    
+                    // 1. Push previous text if not empty
+                    if !current_text.is_empty() {
+                        parts.push(json!(current_text.clone()));
+                        current_text.clear();
+                    }
+
+                    // 2. Extract code until '}'
+                    let mut code_snippet = String::new();
+                    let mut brace_count = 1;
+                    
+                    while let Some(code_char) = chars.next() {
+                        if code_char == '}' {
+                            brace_count -= 1;
+                            if brace_count == 0 { break; }
+                        } else if code_char == '{' {
+                            brace_count += 1;
+                        }
+                        code_snippet.push(code_char);
+                    }
+                    
+                    if brace_count > 0 { return Err("Unterminated interpolation '${'".into()); }
+
+                    // 3. Compile the snippet using a temporary sub-parser
+                    // We reuse the existing Lexer and Parser logic!
+                    let mut sub_lexer = super::lexer::Lexer::new(&code_snippet);
+                    let sub_tokens = sub_lexer.tokenize();
+                    let mut sub_parser = Parser::new(sub_tokens);
+                    let expr = sub_parser.parse_expression()?;
+                    
+                    parts.push(expr);
+                    continue;
+                }
+            }
+            current_text.push(c);
+        }
+        
+        if !current_text.is_empty() {
+            parts.push(json!(current_text));
+        }
+
+        // 4. Combine all parts with "+"
+        // "Hello " + name + "!"
+        if parts.is_empty() { return Ok(json!("")); }
+        
+        let mut final_expr = parts[0].clone();
+        for i in 1..parts.len() {
+            final_expr = json!(["+", final_expr, parts[i]]);
+        }
+
+        Ok(final_expr)
+    }
+
     fn parse_unary(&mut self) -> Result<Value, String> {
         if self.match_token(Token::Bang) {
             let right = self.parse_unary()?;
@@ -475,7 +598,17 @@ impl Parser {
         let mut expr =  match self.peek() {
             Token::Integer(n) => { let v = *n; self.advance(); json!(v) },
             Token::Float(f) => { let v = *f; self.advance(); json!(v) },
-            Token::StringLiteral(s) => { let v = s.clone(); self.advance(); json!(v) },
+            Token::StringLiteral(s) => { 
+                let raw_string = s.clone();
+                self.advance(); 
+                
+                // Check for interpolation marker "${"
+                if raw_string.contains("${") {
+                    return self.parse_interpolated_string(&raw_string);
+                }
+
+                return Ok(json!(raw_string));
+             },
             
             Token::True => { self.advance(); json!(true) },
             Token::False => { self.advance(); json!(false) },

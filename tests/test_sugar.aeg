@@ -1,0 +1,37 @@
+print "--- TEST SUCRE SYNTAXIQUE ---"
+
+var i = 0
+print "i depart : " + i
+
+i++
+print "i++ : " + i
+
+i += 10
+print "i += 10 : " + i
+
+i *= 2
+print "i *= 2 : " + i
+
+i--
+print "i-- : " + i
+
+print ""
+print "--- TEST INTERPOLATION ---"
+
+var nom = "Aegis"
+var v = 1.5
+// Note: On peut mettre des calculs dans l'interpolation !
+var msg = "Langage: ${nom} (Version ${v + 0.1})"
+
+print msg
+
+var user = { nom: "Alice", age: 25 }
+
+// Méthode 1 : Accès direct (grâce à la modif GetAttr)
+print "Accès direct : ${user.nom}" 
+
+// Méthode 2 : Accès via méthode (grâce à la modif CallMethod)
+print "Accès méthode : " + user.get("age")
+
+// Méthode 3 : Clé inexistante
+print "Clé inconnue (attendu null) : " + user.get("adresse")

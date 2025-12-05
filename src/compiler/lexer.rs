@@ -12,6 +12,12 @@ pub enum Token {
     And, Or, Bang,
     LParen, RParen, LBrace, RBrace, LBracket, RBracket,
     Comma, Dot, Colon, EOF,
+    PlusEq,   // +=
+    MinusEq,  // -=
+    StarEq,   // *=
+    SlashEq,  // /=
+    PlusPlus, // ++
+    MinusMinus, // --
 }
 
 pub struct Lexer<'a> {
@@ -35,7 +41,14 @@ impl<'a> Lexer<'a> {
                             if c == '\n' { break; }
                             self.chars.next();
                         }
-                    } else { tokens.push(Token::Slash); }
+                    }
+                    else if let Some(&'=') = self.chars.peek() {
+                        self.chars.next();
+                        tokens.push(Token::SlashEq);
+                    } 
+                    else { 
+                        tokens.push(Token::Slash); 
+                    }
                 }
                 '{' => { tokens.push(Token::LBrace); self.chars.next(); }
                 '}' => { tokens.push(Token::RBrace); self.chars.next(); }
@@ -46,9 +59,39 @@ impl<'a> Lexer<'a> {
                 ',' => { tokens.push(Token::Comma); self.chars.next(); }
                 '.' => { tokens.push(Token::Dot); self.chars.next(); }
                 ':' => { tokens.push(Token::Colon); self.chars.next(); }
-                '+' => { tokens.push(Token::Plus); self.chars.next(); }
-                '-' => { tokens.push(Token::Minus); self.chars.next(); }
-                '*' => { tokens.push(Token::Star); self.chars.next(); }
+                '+' => {
+                    self.chars.next();
+                    if let Some(&'=') = self.chars.peek() {
+                        self.chars.next();
+                        tokens.push(Token::PlusEq);
+                    } else if let Some(&'+') = self.chars.peek() {
+                        self.chars.next();
+                        tokens.push(Token::PlusPlus);
+                    } else {
+                        tokens.push(Token::Plus);
+                    }
+                }
+                '-' => {
+                    self.chars.next();
+                    if let Some(&'=') = self.chars.peek() {
+                        self.chars.next();
+                        tokens.push(Token::MinusEq);
+                    } else if let Some(&'-') = self.chars.peek() {
+                        self.chars.next();
+                        tokens.push(Token::MinusMinus);
+                    } else {
+                        tokens.push(Token::Minus);
+                    }
+                }
+                '*' => {
+                    self.chars.next();
+                    if let Some(&'=') = self.chars.peek() {
+                        self.chars.next();
+                        tokens.push(Token::StarEq);
+                    } else {
+                        tokens.push(Token::Star);
+                    }
+                }
                 '%' => { tokens.push(Token::Percent); self.chars.next(); }
                 '=' => {
                     self.chars.next();
