@@ -3,7 +3,7 @@ use std::str::Chars;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
-    True, False,
+    True, False, Null,
     Try, Catch,
     Var, If, Else, While, For, Func, Return, Print, Input, Class, New, Extends, Import, Break, Switch, Case, Default,
     Identifier(String), StringLiteral(String), Integer(i64), Float(f64),
@@ -315,6 +315,7 @@ impl<'a> Lexer<'a> {
             "default" => TokenKind::Default,
             "true" => TokenKind::True,
             "false" => TokenKind::False,
+            "null" => TokenKind::Null,
             "try" => TokenKind::Try,
             "catch" => TokenKind::Catch,
             "namespace" => TokenKind::Namespace,

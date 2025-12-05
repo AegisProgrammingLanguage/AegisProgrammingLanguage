@@ -103,5 +103,5 @@ while (true) {
     grid = next_grid
     GEN++
     
-    Time.sleep(1000) // Pause de 1s
+    Time.sleep(500) // Pause de 500ms
 }

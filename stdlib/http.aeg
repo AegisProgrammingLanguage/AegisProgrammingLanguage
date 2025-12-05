@@ -1,0 +1,5 @@
+namespace Http {
+    func get_(url) {
+        return http_get(url)
+    }
+}

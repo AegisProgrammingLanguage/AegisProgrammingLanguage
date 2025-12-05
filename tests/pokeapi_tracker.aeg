@@ -1,0 +1,34 @@
+import "stdlib/json.aeg"
+import "stdlib/http.aeg"
+
+print "--- POKEAPI TRACKER ---"
+print "Connexion à l'API PokeApi..."
+
+try {
+    var url = "https://pokeapi.co/api/v2/pokemon/ditto"
+    
+    // Ceci DOIT retourner une string JSON, sinon ça plante après
+    var raw_json = Http.get_(url) 
+
+    // Si raw_json est null ici, c'est que http.aeg n'a pas de return
+    if (raw_json == null) {
+        print "ERREUR FATALE : Http.get a retourné NULL !"
+    } else {
+        var data = Json.parse(raw_json)
+
+        var name = data.get("name")
+        var order = data.get("order")
+        
+        // Bonus : récupérer les types
+        var types = data.get("types")
+        var first_type = types.at(0).get("type").get("name")
+
+        print ""
+        print "Pokemon : ${name}"
+        print "Order   : ${order}"
+        print "Type    : ${first_type}"
+    }
+
+} catch (e) {
+    print "❌ ERREUR CAPTUREE : " + e
+}

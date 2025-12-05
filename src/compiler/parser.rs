@@ -595,6 +595,7 @@ impl Parser {
             },
             TokenKind::True => { self.advance(); json!(true) },
             TokenKind::False => { self.advance(); json!(false) },
+            TokenKind::Null => { self.advance(); json!(null) },
             TokenKind::Identifier(name) => { let n = name.clone(); self.advance(); json!(["get", n]) },
             TokenKind::Func => {
                 self.advance();
