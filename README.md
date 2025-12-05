@@ -181,7 +181,7 @@ greet("World")
 
 ### Decorators
 
-Wrap functions with logic using @.
+Wrap functions with logic using `@`.
 
 ```
 @log
