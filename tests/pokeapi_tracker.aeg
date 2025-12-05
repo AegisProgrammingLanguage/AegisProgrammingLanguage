@@ -8,7 +8,7 @@ try {
     var url = "https://pokeapi.co/api/v2/pokemon/ditto"
     
     // Ceci DOIT retourner une string JSON, sinon ça plante après
-    var raw_json = Http.get_(url) 
+    var raw_json = Http.get(url) 
 
     // Si raw_json est null ici, c'est que http.aeg n'a pas de return
     if (raw_json == null) {

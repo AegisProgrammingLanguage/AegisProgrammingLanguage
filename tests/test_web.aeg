@@ -1,0 +1,36 @@
+import "stdlib/http.aeg"
+import "stdlib/json.aeg"
+
+print "=== TEST API STABLE (JSONPlaceholder) ==="
+
+// --- TEST GET ---
+try {
+    print "GET: https://jsonplaceholder.typicode.com/todos/1"
+    var res = Http.get("https://jsonplaceholder.typicode.com/todos/1")
+    var data = Json.parse(res)
+    
+    print "✅ Reçu : ID " + data.get("id") + " - " + data.get("title")
+} catch (e) {
+    print "❌ Erreur GET : " + e
+}
+
+print ""
+
+// --- TEST POST ---
+try {
+    print "POST: https://jsonplaceholder.typicode.com/posts"
+    var payload = {
+        title: "Test Aegis",
+        body: "Ceci est un post envoyé par Aegis",
+        userId: 1
+    }
+    
+    var res = Http.post("https://jsonplaceholder.typicode.com/posts", payload)
+    var data = Json.parse(res)
+    
+    // JSONPlaceholder renvoie toujours id: 101 pour un nouveau post
+    print "✅ Créé : ID " + data.get("id")
+    print "   Titre : " + data.get("title")
+} catch (e) {
+    print "❌ Erreur POST : " + e
+}

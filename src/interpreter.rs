@@ -521,6 +521,15 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                                 io::stdout().flush().unwrap();
                                 Ok(Value::Null)
                             },
+
+                            "sys_env" => {
+                                if resolved_args.len() != 1 { return Err("sys_env attend le nom de la variable".into()); }
+                                let key = resolved_args[0].as_str()?;
+                                match std::env::var(key) {
+                                    Ok(val) => Ok(Value::String(val)),
+                                    Err(_) => Ok(Value::Null) // Retourne null si non trouvée
+                                }
+                            },
                             // ------------------------
 
                             // --- Json ---
@@ -568,6 +577,28 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                                     .map_err(|e| format!("Erreur lecture body: {}", e))?;
                                     
                                 Ok(Value::String(text))
+                            },
+
+                            "http_post" => {
+                                if resolved_args.len() != 3 { 
+                                    return Err("http_post attend 3 arguments (url, body, content_type)".into()); 
+                                }
+                                let url = resolved_args[0].as_str()?;
+                                let body = resolved_args[1].as_str()?;
+                                let content_type = resolved_args[2].as_str()?;
+                                
+                                let client = reqwest::blocking::Client::new();
+                                let res = client.post(&url)
+                                    .header("Content-Type", content_type)
+                                    .body(body)
+                                    .send()
+                                    .map_err(|e| format!("Erreur Post: {}", e))?;
+                                    
+                                if !res.status().is_success() {
+                                    return Err(format!("Erreur API: {}", res.status()));
+                                }
+                                
+                                Ok(Value::String(res.text().unwrap_or_default()))
                             },
                             // ------------------------
 

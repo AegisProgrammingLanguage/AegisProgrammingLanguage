@@ -1,5 +1,14 @@
-namespace Http {
-    func get_(url) {
+import "stdlib/json.aeg"
+
+class _HttpClient() {
+    get(url) {
         return http_get(url)
     }
+
+    post(url, body) {
+        var body_str = Json.stringify(body)
+        return http_post(url, body_str, "application/json")
+    }
 }
+
+var Http = new _HttpClient()

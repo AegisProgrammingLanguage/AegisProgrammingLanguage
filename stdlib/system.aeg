@@ -2,4 +2,8 @@ namespace System {
     func clear() { 
         return io_clear()
     }
+
+    func env(key) {
+        return sys_env(key)
+    }
 }
