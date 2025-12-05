@@ -1,14 +1,12 @@
-class TimeManager() {
+namespace Time {
     // Retourne le timestamp actuel en ms
-    now() {
+    func now() {
         return time_now()
     }
     
     // Helper pour mesurer une durée
     // Usage: var start = Time.now(); ...; var elapsed = Time.elapsed(start);
-    elapsed(start_time) {
+    func elapsed(start_time) {
         return time_now() - start_time
     }
 }
-
-var Time = new TimeManager()

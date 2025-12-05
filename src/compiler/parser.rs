@@ -87,6 +87,7 @@ impl Parser {
             Token::Import => self.parse_import(),
             Token::Try => self.parse_try(),
             Token::Switch => self.parse_switch(),
+            Token::Namespace => self.parse_namespace(),
             
             // Cas générique pour Identifiants (Variables, Appels, Attributs)
             Token::Identifier(_) => {
@@ -300,6 +301,23 @@ impl Parser {
 
         // JSON AST: ["switch", value_expr, [[case1_val, body], ...], [default_body]]
         Ok(json!(["switch", value, cases, default_body]))
+    }
+
+    fn parse_namespace(&mut self) -> Result<Value, String> {
+        self.advance(); // Eat 'namespace'
+        
+        // 1. Get the namespace name
+        let name = if let Token::Identifier(n) = self.advance() {
+            n.clone()
+        } else {
+            return Err("Expect namespace name".into());
+        };
+        
+        // 2. Parse the block content
+        let body = self.parse_block()?;
+        
+        // JSON: ["namespace", "Name", [instructions]]
+        Ok(json!(["namespace", name, body]))
     }
 
     fn parse_if(&mut self) -> Result<Value, String> {
@@ -694,17 +712,29 @@ impl Parser {
                 json!(ast)
             },
             Token::New => {
-                self.advance(); // Mange le mot-clé 'new'
+                self.advance(); // Mange 'new'
                 
-                // 1. On attend le nom de la classe (Identifier)
-                let class_name = if let Token::Identifier(n) = self.advance() {
-                    n.clone()
+                // 1. On parse le nom de la classe.
+                // Attention : ça peut être "Chien" ou "Math.Vector2".
+                // On utilise parse_identifier_chain (logique simplifiée ici)
+                
+                let mut expr = if let Token::Identifier(n) = self.advance() {
+                    json!(["get", n.clone()])
                 } else {
-                    return Err("Expect class name after 'new'".to_string());
+                    return Err("Expect class name after new".into());
                 };
+                
+                // On gère les points (Math.Vector2.SubClass...)
+                while self.match_token(Token::Dot) {
+                    if let Token::Identifier(member) = self.advance() {
+                        expr = json!(["get_attr", expr, member.clone()]);
+                    } else {
+                        return Err("Expect member name after dot".into());
+                    }
+                }
 
-                // 2. On attend les parenthèses et les arguments
-                self.consume(Token::LParen, "Expect '(' after class name")?;
+                // 2. Les arguments ( ... )
+                self.consume(Token::LParen, "Expect '(' after class ref")?;
                 let mut args = Vec::new();
                 if !self.check(&Token::RParen) {
                     loop {
@@ -712,12 +742,12 @@ impl Parser {
                         if !self.match_token(Token::Comma) { break; }
                     }
                 }
-                self.consume(Token::RParen, "Expect ')' after arguments")?;
-
-                // 3. On construit l'AST JSON: ["new", "ClassName", arg1, arg2...]
-                let mut new_expr = vec![json!("new"), json!(class_name)];
-                new_expr.extend(args);
-                json!(new_expr)
+                self.consume(Token::RParen, "Expect ')'")?;
+                
+                // JSON: ["new", expression_cible, [args]]
+                let mut new_cmd = vec![json!("new"), expr];
+                new_cmd.extend(args);
+                json!(new_cmd)
             },
             _ => return Err(format!("Unexpected token in expression: {:?}", self.peek()))
         };

@@ -18,6 +18,7 @@ pub enum Token {
     SlashEq,  // /=
     PlusPlus, // ++
     MinusMinus, // --
+    Namespace
 }
 
 pub struct Lexer<'a> {
@@ -181,6 +182,7 @@ impl<'a> Lexer<'a> {
             "false" => Token::False,
             "try" => Token::Try,
             "catch" => Token::Catch,
+            "namespace" => Token::Namespace,
             _ => Token::Identifier(s),
         }
     }

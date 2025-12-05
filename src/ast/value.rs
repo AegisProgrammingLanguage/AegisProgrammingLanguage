@@ -2,14 +2,14 @@ use std::fmt;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
+use crate::ast::nodes::ClassDefinition;
 
 use crate::ast::Instruction;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstanceData {
-    pub class_name: String,
-    // Note: Value is used here, so it's a recursive type definition
-    pub fields: HashMap<String, super::Value>, 
+    pub class_def: ClassDefinition, 
+    pub fields: HashMap<String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -22,6 +22,7 @@ pub enum Value {
     Dict(Rc<RefCell<HashMap<String, Value>>>),
     Instance(Rc<RefCell<InstanceData>>),
     Function(Vec<String>, Vec<Instruction>),
+    Class(ClassDefinition),
     Null
 }
 
@@ -51,9 +52,10 @@ impl fmt::Display for Value {
             },
             Value::Instance(inst) => {
                 let data = inst.borrow();
-                write!(f, "<Instance of {}>", data.class_name)
+                write!(f, "<Instance of {}>", data.class_def.name)
             },
             Value::Function(params, _) => write!(f, "<Function({})>", params.join(", ")),
+            Value::Class(c) => write!(f, "<Class {}>", c.name),
         }
     }
 }

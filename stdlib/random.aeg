@@ -1,21 +1,19 @@
-class RandomManager() {
+namespace Random {
     // Entier entre min (inclus) et max (exclus)
-    int(min, max) {
+    func int(min, max) {
         return rand_int(min, max)
     }
     
     // Float entre 0.0 et 1.0
-    float() {
+    func float() {
         return rand_float()
     }
     
     // Retourne un élément aléatoire d'une liste
-    choice(liste) {
+    func choice(liste) {
         var size = len(liste)
         if (size == 0) { return null }
         var idx = rand_int(0, size)
         return liste.at(idx)
     }
 }
-
-var Random = new RandomManager()

@@ -1,0 +1,23 @@
+// Les imports ne font que charger le code.
+// Le code chargé définit maintenant des namespaces (Math, Time, etc.)
+import "stdlib/math.aeg"
+import "stdlib/random.aeg"
+import "stdlib/time.aeg"
+
+print "--- TEST NAMESPACES ---"
+
+// Accès via le namespace Math
+print "Math.PI : " + Math.PI
+print "Math.abs(-10) : " + Math.abs(-10)
+
+// Accès via le namespace Random
+var de = Random.int(1, 7)
+print "Lancer de de : " + de
+
+// Vérification que le scope global n'est pas pollué
+// Si je tape "PI" tout seul, ça doit planter ou être undefined, 
+// sauf si je l'ai défini moi-même ici.
+
+var PI = "Mon PI a moi"
+print "Global PI : " + PI
+print "Namespace PI : " + Math.PI

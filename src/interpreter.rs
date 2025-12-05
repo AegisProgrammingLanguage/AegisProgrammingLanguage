@@ -26,6 +26,7 @@ fn is_truthy(val: &Value) -> bool {
         Value::Dict(d) => !d.borrow().is_empty(),
         Value::Instance(_) => true,
         Value::Function(_, _) => true,
+        Value::Class(_) => true
     }
 }
 
@@ -132,14 +133,34 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
         Expression::GreaterEqual(left, right) => compare_nums(evaluate(left, env.clone())?, evaluate(right, env)?, |a,b| a >= b),
 
         // --- POO & STRUCTURES ---
-        Expression::New(class_name, args) => {
-            let cls = env.borrow().get_class(class_name).ok_or("Classe inconnue")?;
+        Expression::New(target_expr, args) => {
+            // 1. On évalue l'expression (ex: Math.Vector2 -> Value::Class)
+            let class_val = evaluate(target_expr, env.clone())?;
+            
+            // 2. On vérifie que c'est bien une classe
+            let cls_def = match class_val {
+                Value::Class(c) => c,
+                _ => return Err(format!("L'expression évaluée n'est pas une classe : {}", class_val))
+            };
+            
+            // 3. On prépare les arguments
             let mut resolved = Vec::new();
             for a in args { resolved.push(evaluate(a, env.clone())?); }
-            if resolved.len() != cls.params.len() { return Err("Constructeur arity mismatch".into()); }
+            
+            if resolved.len() != cls_def.params.len() { 
+                return Err(format!("Constructeur {} : attendu {} args, reçu {}", cls_def.name, cls_def.params.len(), resolved.len())); 
+            }
+            
+            // 4. Instanciation
             let mut fields = HashMap::new();
-            for (p, v) in cls.params.iter().zip(resolved) { fields.insert(p.clone(), v); }
-            Ok(Value::Instance(Rc::new(RefCell::new(crate::ast::InstanceData { class_name: class_name.clone(), fields }))))
+            for (p, v) in cls_def.params.iter().zip(resolved) { 
+                fields.insert(p.clone(), v); 
+            }
+            
+            Ok(Value::Instance(Rc::new(RefCell::new(crate::ast::InstanceData { 
+                class_def: cls_def, // On stocke la définition ici
+                fields 
+            }))))
         },
         Expression::GetAttr(obj, attr) => {
             let val = evaluate(obj, env.clone())?;
@@ -258,7 +279,23 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                         // Retourne la valeur ou Null si la clé n'existe pas
                         Ok(d.borrow().get(&key).cloned().unwrap_or(Value::Null))
                     },
-                    _ => Err("Method dict unknown".into())
+                    method_name => {
+                        // 1. On emprunte le dictionnaire
+                        let dict = d.borrow();
+                        
+                        // 2. On cherche si une clé correspond au nom de la méthode
+                        if let Some(val) = dict.get(method_name) {
+                            // 3. Si c'est une fonction, on l'exécute !
+                            if let Value::Function(_, _) = val {
+                                // Important : on doit cloner val pour relâcher l'emprunt sur dict avant d'exécuter
+                                let func = val.clone();
+                                drop(dict); // On libère le borrow ici pour éviter les conflits si la fonction modifie le dict
+                                return apply_func(func, resolved, env.clone());
+                            }
+                        }
+                        
+                        Err(format!("Méthode ou fonction '{}' introuvable dans le Dictionnaire/Namespace", method_name))
+                    }
                 },
                 Value::String(s) => match method.as_str() {
                     "trim" => {
@@ -298,21 +335,23 @@ pub fn evaluate(expr: &Expression, env: SharedEnv) -> Result<Value, String> {
                     _ => Err(format!("Unknown method '{}' on String", method))
                 }
                 Value::Instance(inst) => {
-                     let class_name = inst.borrow().class_name.clone();
-                     let mut cur = Some(class_name);
-                     let mut m_def = None;
-                     while let Some(n) = cur {
-                         let e = env.borrow();
-                         let cls = e.get_class(&n).ok_or("Class lost")?;
-                         if let Some(m) = cls.methods.get(method) { m_def = Some(m.clone()); break; }
-                         cur = cls.parent.clone();
+                     // Plus besoin de chercher dans l'env ! On a la def sur nous.
+                     let def = inst.borrow().class_def.clone();
+                     
+                     // Recherche de la méthode (y compris héritage basique si tu l'avais implémenté)
+                     // Pour simplifier, regardons juste la classe actuelle
+                     // (Pour l'héritage, il faudrait que ClassDefinition stocke la ClassDefinition parente et non son nom string... 
+                     // ou alors on accepte que l'héritage ne marche que pour les classes globales pour l'instant).
+                     
+                     if let Some((params, body)) = def.methods.get(method) {
+                         let child = Environment::new_child(env.clone());
+                         child.borrow_mut().set_variable("this".into(), Value::Instance(inst.clone()));
+                         for (p, v) in params.iter().zip(resolved) { child.borrow_mut().set_variable(p.clone(), v); }
+                         for i in body { if let Some(r) = execute(&i, child.clone())? { return Ok(r); } }
+                         return Ok(Value::Null);
                      }
-                     let (params, body) = m_def.ok_or("Method not found")?;
-                     let child = Environment::new_child(env.clone());
-                     child.borrow_mut().set_variable("this".into(), Value::Instance(inst.clone()));
-                     for (p, v) in params.iter().zip(resolved) { child.borrow_mut().set_variable(p.clone(), v); }
-                     for i in body { if let Some(r) = execute(&i, child.clone())? { return Ok(r); } }
-                     Ok(Value::Null)
+                     
+                     Err(format!("Méthode '{}' introuvable sur {}", method, def.name))
                 },
                 _ => Err("No method on this type".into())
             }
@@ -594,7 +633,9 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
         },
 
         Instruction::Class(def) => {
-            env.borrow_mut().define_class(def.clone());
+            // Au lieu de define_class, on stocke dans une variable !
+            let class_val = Value::Class(def.clone());
+            env.borrow_mut().set_variable(def.name.clone(), class_val);
             Ok(None)
         },
 
@@ -701,6 +742,30 @@ pub fn execute(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>, Str
                     }
                 }
             }
+            
+            Ok(None)
+        },
+        Instruction::Namespace { name, body } => {
+            // 1. Create a child environment to isolate the namespace content
+            // It has access to global variables (via parent), but new definitions stay inside.
+            let ns_env = Environment::new_child(env.clone());
+            
+            // 2. Execute the body inside this environment
+            for instr in body {
+                if let Some(ret) = execute(instr, ns_env.clone())? {
+                    return Ok(Some(ret)); // Allow return inside namespace (edge case)
+                }
+            }
+            
+            // 3. Harvest all variables defined in this scope
+            // Since we unified Functions and Variables, everything is in `variables` map.
+            let exported_members = ns_env.borrow().variables.clone();
+            
+            // 4. Create a Dict containing these members
+            let ns_object = Value::Dict(Rc::new(RefCell::new(exported_members)));
+            
+            // 5. Register this Dict in the CURRENT environment under the namespace name
+            env.borrow_mut().set_variable(name.clone(), ns_object);
             
             Ok(None)
         },

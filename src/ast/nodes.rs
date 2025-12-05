@@ -40,7 +40,7 @@ pub enum Expression {
 
     // Structures & Calls
     Call(Box<Expression>, Vec<Expression>),
-    New(String, Vec<Expression>),
+    New(Box<Expression>, Vec<Expression>),
     GetAttr(Box<Expression>, String),
     CallMethod(Box<Expression>, String, Vec<Expression>),
     List(Vec<Expression>),
@@ -87,5 +87,9 @@ pub enum Instruction {
         value: Expression,
         cases: Vec<(Expression, Vec<Instruction>)>, 
         default: Vec<Instruction>,
+    },
+    Namespace {
+        name: String,
+        body: Vec<Instruction>
     },
 }

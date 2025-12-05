@@ -151,14 +151,11 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     return Ok(Expression::Call(Box::new(target), args));
                 },
                 "new" => {
-                    // ["new", "ClassName", arg1, arg2...]
-                    let class_name = array.get(1).and_then(|v| v.as_str()).ok_or("New attend un nom de classe")?.to_string();
+                    // ["new", target_expr, arg1, arg2...]
+                    let target = parse_expression(&array[1])?;
                     let args_json = &array[2..];
-                    let mut args = Vec::new();
-                    for arg in args_json {
-                        args.push(parse_expression(arg)?);
-                    }
-                    return Ok(Expression::New(class_name, args));
+                    let args = args_json.iter().map(parse_expression).collect::<Result<_,_>>()?;
+                    return Ok(Expression::New(Box::new(target), args));
                 },
                 "get_attr" => {
                     let obj = parse_expression(&array[1])?;
@@ -398,6 +395,11 @@ pub fn parse_instruction(json_instr: &JsonValue) -> Result<Instruction, String> 
                 cases, 
                 default: default_body 
             })
+        },
+        "namespace" => {
+            let name = array[1].as_str().ok_or("Namespace name must be string")?.to_string();
+            let body = parse_block(&array[2])?;
+            Ok(Instruction::Namespace { name, body })
         },
         _ => Err(format!("Instruction inconnue: {}", command)),
     }
