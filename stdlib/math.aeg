@@ -123,4 +123,71 @@ namespace Math {
         }
     }
 
+    // --- Trigonometry ---
+
+    // Converts degrees to radians
+    func to_radians(degrees) {
+        return degrees * (Math.PI / 180.0)
+    }
+
+    // Converts radians to degrees
+    func to_degrees(radians) {
+        return radians * (180.0 / Math.PI)
+    }
+
+    // Calculates sine of x (radians) using Taylor Series
+    // Precision: 10 iterations
+    func sin(x) {
+        // Normalization could be added here for large x, 
+        // but for basic usage within [-2PI, 2PI], this is fine.
+
+        var term = x
+        var sum = x
+        var n = 1
+
+        // Loop 10 times for precision
+        for (i, 0, 10, 1) {
+            // Formula: term = -term * x^2 / ((2n)(2n+1))
+            var divisor = (2 * n) * (2 * n + 1)
+            term = 0 - (term * x * x) // Negative multiplication
+            term = term / divisor
+            
+            sum = sum + term
+            n = n + 1
+        }
+
+        return sum
+    }
+
+    // Calculates cosine of x (radians) using Taylor Series
+    func cos(x) {
+        var term = 1
+        var sum = 1
+        var n = 1
+        
+        for (i, 0, 10, 1) {
+            // Formula: term = -term * x^2 / ((2n-1)(2n))
+            var divisor = (2 * n - 1) * (2 * n)
+            term = 0 - (term * x * x)
+            term = term / divisor
+            
+            sum = sum + term
+            n = n + 1
+        }
+
+        return sum
+    }
+
+    // Calculates tangent of x (radians)
+    func tan(x) {
+        var c = Math.cos(x)
+        
+        // Avoid division by zero
+        if (Math.abs(c) < 0.000001) {
+            // Technically undefined/infinity, return a large number
+            return 99999999
+        }
+
+        return Math.sin(x) / c
+    }
 }

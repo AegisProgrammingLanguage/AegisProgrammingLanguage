@@ -1,0 +1,24 @@
+import "stdlib/math.aeg"
+
+print "--- TEST TRIGONOMETRY ---"
+
+var angle_deg = 45
+var angle_rad = Math.to_radians(angle_deg) // ~0.785
+
+print "Angle: " + angle_deg + " deg = " + angle_rad + " rad"
+
+// Sin(45°) ≈ 0.707
+var s = Math.sin(angle_rad)
+print "Sin(45): " + s
+
+// Cos(45°) ≈ 0.707
+var c = Math.cos(angle_rad)
+print "Cos(45): " + c
+
+// Tan(45°) ≈ 1.0
+var t = Math.tan(angle_rad)
+print "Tan(45): " + t
+
+// Vérification de l'identité trigonométrique : sin² + cos² = 1
+var identity = (s * s) + (c * c)
+print "Sin^2 + Cos^2 (Attendu ~1.0): " + identity

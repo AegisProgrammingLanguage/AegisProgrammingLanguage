@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub fn register(map: &mut HashMap<String, super::NativeFn>) {
     map.insert("str".to_string(), str);
     map.insert("to_int".to_string(), to_int);
+    map.insert("to_float".to_string(), to_float);
     map.insert("len".to_string(), len);
     map.insert("fmt".to_string(), fmt);
     map.insert("typeof".to_string(), type_of);
@@ -15,6 +16,10 @@ fn str(args: Vec<Value>) -> Result<Value, String> {
 
 fn to_int(args: Vec<Value>) -> Result<Value, String> {
     Ok(Value::Integer(args[0].as_int()?))
+}
+
+fn to_float(args: Vec<Value>) -> Result<Value, String> {
+    Ok(Value::Float(args[0].as_float()?))
 }
 
 fn len(args: Vec<Value>) -> Result<Value, String> {

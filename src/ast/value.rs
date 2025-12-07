@@ -72,6 +72,14 @@ impl Value {
         }
     }
 
+    pub fn as_float(&self) -> Result<f64, String> {
+        match self {
+            Value::Float(f) => Ok(*f),
+            Value::Integer(i) => Ok(*i as f64), 
+            _ => Err(format!("Expected Float, got {:?}", self))
+        }
+    }
+
     pub fn as_str(&self) -> Result<String, String> {
         match self {
             Value::String(s) => Ok(s.clone()),

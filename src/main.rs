@@ -1,15 +1,36 @@
-mod ast;
-mod compiler;
-mod interpreter;
-mod loader;
-mod native;
-
-use ast::Environment;
-use std::{fs, env, io::{self, Write}};
+use aegis_core::{compiler, interpreter, loader, native, plugins};
+use aegis_core::ast::environment::Environment;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::io::Write;
+use std::{env, fs, io};
 use serde_json::Value as JsonValue;
+
+#[derive(Deserialize)]
+struct Config {
+    dependencies: Option<HashMap<String, String>>
+}
+
+fn load_config() {
+    if let Ok(content) = fs::read_to_string("aegis.toml") {
+        println!("📝 Configuration trouvée, chargement des plugins...");
+        let config: Config = toml::from_str(&content).unwrap_or_else(|_| Config { dependencies: None });
+
+        if let Some(deps) = config.dependencies {
+            for (name, path) in deps {
+                println!("🔌 Chargement du plugin '{}' depuis '{}'...", name, path);
+                if let Err(e) = plugins::load_plugin(&path) {
+                    eprintln!("❌ Erreur : {}", e);
+                }
+            }
+        }
+    }
+}
 
 fn main() -> Result<(), String> {
     native::init_registry();
+    load_config();
+    
     let args: Vec<String> = env::args().collect();
     
     // CAS 1 : Pas d'arguments -> Mode REPL (Interactif)
