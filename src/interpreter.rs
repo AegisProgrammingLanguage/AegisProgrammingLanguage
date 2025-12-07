@@ -2,6 +2,7 @@ use crate::ast::{Expression, Instruction, Statement, Value};
 use crate::compiler;
 use crate::ast::environment::{Environment,SharedEnv};
 use crate::loader::parse_block;
+use crate::stdlib::StdLibAsset;
 use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
@@ -605,9 +606,32 @@ fn execute_internal(instr: &Instruction, env: SharedEnv) -> Result<Option<Value>
 
         Instruction::Import(path) => {
             // 1. Read the file content
-            let source_code = fs::read_to_string(path)
-                .map_err(|e| format!("Failed to read file '{}': {}", path, e))?;
+            let source_code = if path.starts_with("stdlib/") {
+                // 1. C'est un fichier de la librairie standard
+                // Le path est ex: "stdlib/math.aeg"
+                // Mais RustEmbed a stocké les fichiers RELATIVEMENT au dossier "stdlib/"
+                // Donc il connaît "math.aeg", pas "stdlib/math.aeg".
+                
+                // On retire le préfixe "stdlib/"
+                let clean_path = path.strip_prefix("stdlib/")
+                    .unwrap_or(path)
+                    .replace("\\", "/"); // Sécurité Windows
 
+                match StdLibAsset::get(&clean_path) {
+                    Some(content) => {
+                        // content.data est en Cow<[u8]>, on le convertit en String
+                        std::str::from_utf8(content.data.as_ref())
+                            .map_err(|e| format!("Erreur d'encodage stdlib '{}': {}", path, e))?
+                            .to_string()
+                    },
+                    None => return Err(format!("Module standard introuvable : {}", path)),
+                }
+            } else {
+                // 2. C'est un fichier utilisateur classique (sur le disque)
+                fs::read_to_string(path)
+                    .map_err(|e| format!("Impossible de lire le fichier '{}': {}", path, e))?
+            };
+            
             // 2. Compile the source code using the existing compiler logic
             // We get a JSON Value (AST) back
             let ast_json = compiler::compile(&source_code)?;
