@@ -11,7 +11,7 @@ namespace System {
         return sys_args()
     }
 
-    func fail() {
-        return sys_fail()
+    func fail(msg) {
+        return sys_fail(msg)
     }
 }
