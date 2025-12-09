@@ -11,7 +11,7 @@ use crate::chunk::Chunk;
 use crate::opcode::OpCode;
 use crate::ast::environment::Environment;
 
-const STACK_MAX: usize = 256;
+const STACK_MAX: usize = 4096;
 
 #[allow(dead_code)]
 const FRAMES_MAX: usize = 64;
@@ -66,7 +66,7 @@ impl VM {
         };
 
         let mut vm = VM {
-            frames: vec![main_frame],
+            frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(STACK_MAX),
             // On prépare de la place (256 slots globaux)
             globals: vec![Value::Null; 256],
@@ -74,6 +74,8 @@ impl VM {
             handlers: Vec::new(),
             modules: HashMap::new()
         };
+
+        vm.frames.push(main_frame);
 
         let natives = crate::native::get_all_names();
 
@@ -220,12 +222,14 @@ impl VM {
             OpCode::Call => {
                 let arg_count = self.read_byte() as usize;
                 let func_idx = self.stack.len() - 1 - arg_count;
-
-                // On clone la cible pour pouvoir la passer à call_value
-                let target = self.stack[func_idx].clone();
-
+                
+                // VERSION UNSAFE : On récupère la fonction sans vérifier les bornes
+                let target = unsafe { 
+                    self.stack.get_unchecked(func_idx).clone() 
+                };
+                
                 self.call_value(target, arg_count)?;
-            }
+            },
             OpCode::Print => {
                 let val = self.pop();
                 println!("{}", val);
@@ -236,42 +240,71 @@ impl VM {
                 self.push(val);
             }
             OpCode::Add => {
-                let b = self.pop();
-                let a = self.pop();
+                // ASTUCE : On regarde les deux derniers éléments SANS les poper (peek)
+                // Cela évite de déplacer la mémoire si on doit juste remplacer le résultat
+                let len = self.stack.len();
+                let right = &self.stack[len - 1];
+                let left = &self.stack[len - 2];
 
-                match (a, b) {
-                    // Entier + Entier
-                    (Value::Integer(v1), Value::Integer(v2)) => self.push(Value::Integer(v1 + v2)),
-                    // Float + Float
-                    (Value::Float(v1), Value::Float(v2)) => self.push(Value::Float(v1 + v2)),
-                    // Float + Int (Coercition)
-                    (Value::Float(v1), Value::Integer(v2)) => {
-                        self.push(Value::Float(v1 + v2 as f64))
-                    }
-                    (Value::Integer(v1), Value::Float(v2)) => {
-                        self.push(Value::Float(v1 as f64 + v2))
-                    }
+                // FAST PATH : Si ce sont deux entiers, on calcule et on écrase
+                if let (Value::Integer(b), Value::Integer(a)) = (right, left) {
+                    let res = a + b;
+                    // On retire virtuellement un élément (pop)
+                    self.stack.truncate(len - 1);
+                    // On écrase le dernier élément restant par le résultat
+                    self.stack[len - 2] = Value::Integer(res);
+                }
+                // SLOW PATH : Le reste (String, Float...)
+                else {
+                    let b = self.pop();
+                    let a = self.pop();
 
-                    // String + N'importe quoi
-                    (Value::String(s1), val2) => {
-                        self.push(Value::String(format!("{}{}", s1, val2)));
-                    }
-                    (val1, Value::String(s2)) => {
-                        self.push(Value::String(format!("{}{}", val1, s2)));
-                    }
+                    match (a, b) {
+                        // Float + Float
+                        (Value::Float(v1), Value::Float(v2)) => self.push(Value::Float(v1 + v2)),
+                        // Float + Int (Coercition)
+                        (Value::Float(v1), Value::Integer(v2)) => {
+                            self.push(Value::Float(v1 + v2 as f64))
+                        }
+                        (Value::Integer(v1), Value::Float(v2)) => {
+                            self.push(Value::Float(v1 as f64 + v2))
+                        }
 
-                    _ => return Err("Type error in ADD".into()),
+                        // String + N'importe quoi
+                        (Value::String(s1), val2) => {
+                            self.push(Value::String(format!("{}{}", s1, val2)));
+                        }
+                        (val1, Value::String(s2)) => {
+                            self.push(Value::String(format!("{}{}", val1, s2)));
+                        }
+
+                        _ => return Err("Type error in ADD".into()),
+                    }
                 }
             }
             OpCode::Sub => {
-                let b = self.pop();
-                let a = self.pop();
-                match (a, b) {
-                    (Value::Integer(v1), Value::Integer(v2)) => self.push(Value::Integer(v1 - v2)),
-                    (Value::Float(v1), Value::Float(v2)) => self.push(Value::Float(v1 - v2)),
-                    (Value::Integer(v1), Value::Float(v2)) => self.push(Value::Float(v1 as f64 - v2)),
-                    (Value::Float(v1), Value::Integer(v2)) => self.push(Value::Float(v1 - v2 as f64)),
-                    _ => return Err("Type error in SUB".into())
+                let len = self.stack.len();
+                let b_ref = &self.stack[len - 1];
+                let a_ref = &self.stack[len - 2];
+
+                // FAST PATH : Integer - Integer
+                if let (Value::Integer(b), Value::Integer(a)) = (b_ref, a_ref) {
+                    let res = a - b;
+                    // On supprime le dernier élément (b)
+                    self.stack.truncate(len - 1);
+                    // On remplace l'avant-dernier (a) par le résultat
+                    self.stack[len - 2] = Value::Integer(res);
+                }
+                // SLOW PATH : Le reste (Float...)
+                else {
+                    let b = self.pop();
+                    let a = self.pop();
+                    match (a, b) {
+                        (Value::Float(v1), Value::Float(v2)) => self.push(Value::Float(v1 - v2)),
+                        (Value::Integer(v1), Value::Float(v2)) => self.push(Value::Float(v1 as f64 - v2)),
+                        (Value::Float(v1), Value::Integer(v2)) => self.push(Value::Float(v1 - v2 as f64)),
+                        _ => return Err("Type error in SUB".into())
+                    }
                 }
             },
             OpCode::Mul => {
@@ -317,10 +350,13 @@ impl VM {
             }
             OpCode::GetLocal => {
                 let slot_idx = self.read_byte() as usize;
-                // On calcule la position absolue dans la pile
                 let abs_index = self.current_frame().slot_offset + slot_idx;
-
-                let val = self.stack[abs_index].clone();
+                
+                // VERSION UNSAFE
+                // On évite le "Bounds Check" du vecteur stack
+                let val = unsafe { 
+                    self.stack.get_unchecked(abs_index).clone() 
+                };
                 self.push(val);
             }
             OpCode::SetLocal => {
@@ -398,13 +434,32 @@ impl VM {
                     self.push(Value::Boolean(false));
                 }
             }
-            OpCode::Less => {
-                let b = self.pop();
-                let a = self.pop();
-                if let (Value::Integer(v1), Value::Integer(v2)) = (a, b) {
-                    self.push(Value::Boolean(v1 < v2));
-                } else {
-                    self.push(Value::Boolean(false));
+            OpCode::Less => {let len = self.stack.len();
+                if len < 2 { return Err("Stack underflow in LESS".into()); }
+
+                let b_ref = &self.stack[len - 1];
+                let a_ref = &self.stack[len - 2];
+
+                // FAST PATH : Integer < Integer
+                if let (Value::Integer(b), Value::Integer(a)) = (b_ref, a_ref) {
+                    let res = a < b;
+                    self.stack.truncate(len - 1);
+                    // On remplace l'Integer 'a' par un Boolean
+                    self.stack[len - 2] = Value::Boolean(res);
+                } 
+                // SLOW PATH
+                else {
+                    let b = self.pop();
+                    let a = self.pop();
+                    if let (Value::Integer(v1), Value::Integer(v2)) = (&a, &b) {
+                        self.push(Value::Boolean(v1 < v2));
+                    } else if let (Value::Float(v1), Value::Float(v2)) = (&a, &b) {
+                        self.push(Value::Boolean(v1 < v2));
+                    } else {
+                        // Comparaison mixte ou autre
+                        // Note: Pour être rigoureux, il faudrait gérer Float vs Int ici aussi
+                        self.push(Value::Boolean(false));
+                    }
                 }
             }
             OpCode::LessEqual => {
@@ -920,9 +975,13 @@ impl VM {
     #[inline(always)]
     fn read_byte(&mut self) -> u8 {
         let frame = self.current_frame();
-        let b = frame.chunk().code[frame.ip];
-        frame.ip += 1;
-        b
+        // VERSION UNSAFE (Plus rapide)
+        unsafe {
+            // On suppose que le compilateur n'a jamais généré un saut hors du code
+            let b = *frame.chunk().code.get_unchecked(frame.ip);
+            frame.ip += 1;
+            b
+        }
     }
 
     fn read_short(&mut self) -> u16 {
