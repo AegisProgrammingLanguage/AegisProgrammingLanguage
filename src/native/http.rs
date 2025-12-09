@@ -15,7 +15,7 @@ fn http_get(args: Vec<Value>) -> Result<Value, String> {
 
     // 1. Création d'un client avec User-Agent (Indispensable pour beaucoup d'API)
     let client = reqwest::blocking::Client::builder()
-        .user_agent("Aegis-Lang/1.0")
+        .user_agent("Aegis-Lang/2.0")
         .build()
         .map_err(|e| format!("Erreur création client HTTP: {}", e))?;
 
@@ -45,7 +45,11 @@ fn http_post(args: Vec<Value>) -> Result<Value, String> {
     let body = args[1].as_str()?;
     let content_type = args[2].as_str()?;
                                 
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Aegis-Lang/2.0")
+        .build()
+        .map_err(|e| format!("Erreur création client HTTP: {}", e))?;
+
     let res = client.post(&url)
         .header("Content-Type", content_type)
         .body(body)

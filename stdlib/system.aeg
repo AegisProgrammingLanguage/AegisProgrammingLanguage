@@ -8,7 +8,7 @@ namespace System {
     }
 
     func args() {
-        return sys_args()
+        return __ARGS__
     }
 
     func fail(msg) {

@@ -58,6 +58,7 @@ pub enum OpCode {
     Throw,
 
     Import,
+    CheckType
 }
 
 impl From<u8> for OpCode {

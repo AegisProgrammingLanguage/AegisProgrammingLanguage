@@ -73,6 +73,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         OpCode::Throw => simple_instruction("THROW", offset),
 
         OpCode::Import => constant_instruction("IMPORT", chunk, offset),
+        OpCode::CheckType => constant_instruction("CHECK_TYPE", chunk, offset),
     }
 }
 

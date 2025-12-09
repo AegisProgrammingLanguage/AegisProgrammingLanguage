@@ -50,7 +50,7 @@ pub struct VM {
 }
 
 impl VM {
-    pub fn new(main_chunk: Chunk, global_names: Rc<RefCell<HashMap<String, u8>>>) -> Self {
+    pub fn new(main_chunk: Chunk, global_names: Rc<RefCell<HashMap<String, u8>>>, args: Vec<String>) -> Self {
         let main_func = Value::Function(Rc::new(FunctionData {
             params: vec![],
             ret_type: None,
@@ -86,6 +86,22 @@ impl VM {
 
         for (i, name) in natives.into_iter().enumerate() {
             vm.globals[i] = Value::Native(name);
+        }
+
+        let args_values: Vec<Value> = args.iter().map(|s| Value::String(s.clone())).collect();
+        let args_list = Value::List(Rc::new(RefCell::new(args_values)));
+
+        // On doit trouver l'ID de "_ARGS" (ou un nom réservé)
+        // Astuce : On l'ajoute manuellement à global_names et globals
+        {
+            let mut names = vm.global_names.borrow_mut();
+            let id = names.len() as u8;
+            names.insert("__ARGS__".to_string(), id);
+            
+            if id as usize >= vm.globals.len() {
+                vm.globals.resize((id + 1) as usize, Value::Null);
+            }
+            vm.globals[id as usize] = args_list;
         }
 
         vm
@@ -793,6 +809,34 @@ impl VM {
                     
                     // 7. RETURN
                     self.push(Value::Null);
+                }
+            },
+            OpCode::CheckType => {
+                let type_name_idx = self.read_byte();
+                let expected_type = self.current_frame().chunk().constants[type_name_idx as usize].to_string();
+                
+                // On regarde la valeur sur le sommet de la pile (sans la pop)
+                let val = self.stack.last().expect("Stack underflow in CheckType");
+                
+                // Vérification
+                let is_valid = match (val, expected_type.as_str()) {
+                    (Value::Integer(_), "int") => true,
+                    (Value::Float(_), "float") => true,
+                    (Value::String(_), "string") => true,
+                    (Value::Boolean(_), "bool") => true,
+                    (Value::List(_), "list") => true,
+                    (Value::Dict(_), "dict") => true,
+                    (Value::Function(_), "func") => true, // Ou "function"
+                    (Value::Null, _) => false, // Null n'est généralement pas le type attendu (sauf "any" ?)
+                    (_, "any") => true,
+                    _ => false,
+                };
+
+                if !is_valid {
+                    return Err(format!(
+                        "Erreur de Type: Attendu '{}', recu '{}'", 
+                        expected_type, val
+                    ));
                 }
             },
         }

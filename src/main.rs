@@ -213,8 +213,18 @@ fn run_file(filename: &str) -> Result<(), String> {
     // use aegis_core::vm::debug;
     // debug::disassemble_chunk(&chunk, &format!("EXECUTION DE {}", filename));
 
+    let mut script_args = Vec::new();
+    // On filtre le "--" s'il est présent en premier
+    if let Some(Commands::Run { args, .. }) = &Cli::parse().command {
+        for arg in args {
+            if arg != "--" {
+                script_args.push(arg.clone());
+            }
+        }
+    }
+
     // 5. Exécution VM
-    let mut vm = VM::new(chunk, global_names);
+    let mut vm = VM::new(chunk, global_names, script_args);
     
     // On pourrait passer 'args' à la VM ici dans le futur
     vm.run()

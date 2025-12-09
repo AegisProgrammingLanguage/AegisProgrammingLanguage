@@ -12,6 +12,7 @@ pub struct Compiler {
     pub globals: Rc<RefCell<HashMap<String, u8>>>, 
     pub locals: HashMap<String, u8>,
     pub scope_depth: usize,
+    pub current_return_type: Option<String>,
 }
 
 impl Compiler {
@@ -32,6 +33,7 @@ impl Compiler {
             globals,
             locals: HashMap::new(),
             scope_depth: 0,
+            current_return_type: None,
         }
     }
 
@@ -41,6 +43,7 @@ impl Compiler {
             globals, 
             locals: HashMap::new(),
             scope_depth: 0,
+            current_return_type: None,
         }
     }
 
@@ -320,10 +323,23 @@ impl Compiler {
             },
             Instruction::Return(expr) => {
                 self.compile_expression(expr); // 1. Calcule la valeur de retour
+
+                if let Some(ret_type) = &self.current_return_type {
+                    let type_idx = self.chunk.add_constant(Value::String(ret_type.clone()));
+                    self.emit_op(OpCode::CheckType);
+                    self.emit_byte(type_idx);
+                }
+
                 self.emit_op(OpCode::Return);  // 2. Quitte la fonction
             },
-            Instruction::Set(var_name, _, expr) => {
+            Instruction::Set(var_name, type_annot, expr) => {
                 self.compile_expression(expr); // La valeur calculée est maintenant sur la pile [val]
+
+                if let Some(type_name) = type_annot {
+                    let type_idx = self.chunk.add_constant(Value::String(type_name));
+                    self.emit_op(OpCode::CheckType);
+                    self.emit_byte(type_idx);
+                }
 
                 // CAS 1 : C'est une variable locale DÉJÀ connue (Assignation : x = 5)
                 if let Some(&idx) = self.locals.get(&var_name) {
@@ -363,8 +379,25 @@ impl Compiler {
                 let mut func_compiler = Compiler::new_with_globals(self.globals.clone());
                 func_compiler.scope_depth = 1;
 
-                for (i, (param_name, _)) in params.iter().enumerate() {
+                for (i, (param_name, param_type)) in params.iter().enumerate() {
                     func_compiler.locals.insert(param_name.clone(), i as u8);
+
+                    if let Some(t) = param_type {
+                        // Au début de la fonction, les arguments sont déjà sur la pile (locales).
+                        // On doit les charger, les checker, et les poper (juste pour le check).
+                        
+                        // 1. Lire la variable locale
+                        func_compiler.emit_op(OpCode::GetLocal);
+                        func_compiler.emit_byte(i as u8);
+                        
+                        // 2. Checker
+                        let type_idx = func_compiler.chunk.add_constant(Value::String(t.clone()));
+                        func_compiler.emit_op(OpCode::CheckType);
+                        func_compiler.emit_byte(type_idx);
+                        
+                        // 3. Nettoyer la pile (on a dupliqué via GetLocal)
+                        func_compiler.emit_op(OpCode::Pop);
+                    }
                 }
 
                 for stmt in body {
