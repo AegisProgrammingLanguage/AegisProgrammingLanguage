@@ -1,0 +1,6 @@
+import "stdlib/test.aeg"
+
+Test.run("Math de base", func() {
+    Assert.eq(1 + 1, 2, "1 + 1 doit faire 2")
+    Assert.is_true(10 > 5, "10 plus grand que 5")
+})

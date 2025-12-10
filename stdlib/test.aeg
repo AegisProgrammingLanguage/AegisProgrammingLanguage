@@ -1,20 +1,27 @@
 import "stdlib/system.aeg"
 
-var __AEGIS_TESTS = []
-
-func test(f) {
-    __AEGIS_TESTS.push(f)
-    return f
-}
-
-func assert(condition, message) {
-    if (!condition) {
-        System.fail(message)
+namespace Assert {
+    func eq(a, b, msg) {
+        if (a != b) {
+            System.fail("Assertion Failed: " + a + " != " + b + " (" + msg + ")")
+        }
+    }
+    
+    func is_true(cond, msg) {
+        if (!cond) {
+            System.fail("Assertion Failed: Expected true (" + msg + ")")
+        }
     }
 }
 
-func assert_eq(a, b, message) {
-    if (a != b) {
-        System.fail(message + " (Attendu: " + b + ", Reçu: " + a + ")")
+namespace Test {
+    func run(name, callback) {
+        print "TEST: " + name + "..."
+        try {
+            callback()
+            print "  ✅ PASS"
+        } catch (e) {
+            print "  ❌ FAIL: " + e
+        }
     }
 }

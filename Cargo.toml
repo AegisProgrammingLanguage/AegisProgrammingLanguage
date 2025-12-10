@@ -41,6 +41,7 @@ reqwest = { version = "0.11", features = ["blocking", "json", "default-tls", "mu
 libloading = "0.8"
 regex = "1"
 lazy_static = "1.5.0"
+chrono = "0.4"
 
 # --- Assets & Packaging ---
 # Handling zip files and embedding stdlib into the binary

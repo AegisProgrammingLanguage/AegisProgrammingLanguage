@@ -1,0 +1,10 @@
+namespace Date {
+    func now() { 
+        return date_now() 
+    } // ISO String
+    
+    // Ex: Date.format("%Y-%m-%d %H:%M:%S")
+    func format(fmt) { 
+        return date_format(fmt) 
+    }
+}
