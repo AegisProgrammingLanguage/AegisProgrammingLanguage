@@ -157,6 +157,12 @@ impl Parser {
                     }
                 }
             },
+
+            TokenKind::Continue => {
+                let line = self.current_line();
+                self.advance(); 
+                Ok(json!(["continue", line])) 
+            },
             
             _ => Err(format!("Unexpected token at start of statement: {:?} (Line {})", self.peek(), self.current_line())),
         }

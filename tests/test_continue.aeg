@@ -1,0 +1,47 @@
+print "--- TEST CONTINUE (WHILE) ---"
+
+// Test 1 : Sauter une valeur spécifique
+print "1. Comptage de 1 a 5 (sans le 3) :"
+
+var i = 0
+while (i < 5) {
+    i = i + 1 // Incrémentation au début pour éviter la boucle infinie
+
+    if (i == 3) {
+        print "   -> (Saut du 3 via continue)"
+        continue
+    }
+
+    print "   Nombre : " + i
+}
+
+print ""
+
+// Test 2 : Logique Pair/Impair (Modulo)
+print "2. Affichage des nombres impairs seulement (0 a 6) :"
+
+var j = 0
+while (j < 6) {
+    j = j + 1
+    
+    // Si c'est pair (reste division par 2 == 0), on saute
+    if (j % 2 == 0) {
+        continue
+    }
+    
+    print "   " + j + " est Impair"
+}
+
+print ""
+
+print "--- TEST CONTINUE FOR ---"
+for (i, 0, 5, 1) {
+    if (i == 2) { 
+        print "Skip 2"
+        continue 
+    }
+    print i
+}
+// Doit afficher : 0, 1, Skip 2, 3, 4
+
+print "--- FIN DU TEST ---"

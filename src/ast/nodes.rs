@@ -100,6 +100,7 @@ pub enum Instruction {
         body: Vec<Statement>
     },
     Throw(Expression),
+    Continue
 }
 
 #[derive(Debug, Clone, PartialEq)]

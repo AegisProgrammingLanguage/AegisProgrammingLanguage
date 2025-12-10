@@ -7,13 +7,20 @@ use crate::ast::{Instruction, Expression, Value};
 use crate::chunk::Chunk;
 use crate::opcode::OpCode;
 
+#[derive(Debug)]
+pub enum LoopState {
+    While { start_ip: usize },
+    For { continue_patches: Vec<usize> }, // Liste des jumps à corriger
+}
+
 pub struct Compiler {
     pub chunk: Chunk,
     pub globals: Rc<RefCell<HashMap<String, u8>>>, 
     pub locals: HashMap<String, u8>,
     pub scope_depth: usize,
     pub current_return_type: Option<String>,
-    pub current_line: usize
+    pub current_line: usize,
+    pub loop_stack: Vec<LoopState>
 }
 
 impl Compiler {
@@ -35,7 +42,8 @@ impl Compiler {
             locals: HashMap::new(),
             scope_depth: 0,
             current_return_type: None,
-            current_line: 1
+            current_line: 1,
+            loop_stack: Vec::new()
         }
     }
 
@@ -46,7 +54,8 @@ impl Compiler {
             locals: HashMap::new(),
             scope_depth: 0,
             current_return_type: None,
-            current_line: 1
+            current_line: 1,
+            loop_stack: Vec::new()
         }
     }
 
@@ -489,8 +498,16 @@ impl Compiler {
                 let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
                 self.emit_op(OpCode::Pop);
 
+                self.loop_stack.push(LoopState::For { continue_patches: Vec::new() });
+
                 // 4. Corps
                 self.compile_scope(body);
+
+                if let Some(LoopState::For { continue_patches }) = self.loop_stack.pop() {
+                    for patch_offset in continue_patches {
+                        self.patch_jump(patch_offset); // On redirige les sauts ici (début incrément)
+                    }
+                }
 
                 // 5. Incrément : i = i + step
                 if is_local {
@@ -768,6 +785,38 @@ impl Compiler {
                 self.emit_op(OpCode::Import);
                 self.emit_byte(path_idx);
             },
+            Instruction::Continue => {
+                // Étape 1 : On détermine l'action à faire (Lecture seule ou copie simple)
+                // On utilise un enum temporaire ou juste des variables pour sortir l'info du scope
+                enum LoopAction {
+                    JumpToStart(usize),
+                    RecordPatch,
+                    Error
+                }
+
+                let action = match self.loop_stack.last() { // .last() suffit (lecture seule)
+                    Some(LoopState::While { start_ip }) => LoopAction::JumpToStart(*start_ip),
+                    Some(LoopState::For { .. }) => LoopAction::RecordPatch,
+                    None => LoopAction::Error,
+                }; // Ici, l'emprunt sur self.loop_stack est terminé !
+
+                // Étape 2 : On agit (self est libre)
+                match action {
+                    LoopAction::JumpToStart(ip) => {
+                        self.emit_loop(ip);
+                    },
+                    LoopAction::RecordPatch => {
+                        // 1. On émet le saut (besoin de self)
+                        let offset = self.emit_jump(OpCode::Jump);
+                        
+                        // 2. On ré-emprunte juste ce qu'il faut pour stocker l'offset
+                        if let Some(LoopState::For { continue_patches }) = self.loop_stack.last_mut() {
+                            continue_patches.push(offset);
+                        }
+                    },
+                    LoopAction::Error => panic!("'continue' utilisé hors d'une boucle."),
+                }
+            },
         }
     }
 
@@ -841,6 +890,8 @@ impl Compiler {
         // 1. Marquer le début de la boucle (pour y revenir après)
         let loop_start = self.chunk.code.len();
 
+        self.loop_stack.push(LoopState::While { start_ip: loop_start });
+
         // 2. Compiler la condition
         self.compile_expression(condition);
 
@@ -857,6 +908,8 @@ impl Compiler {
         // 6. Patcher le saut de sortie
         self.patch_jump(exit_jump);
         self.emit_op(OpCode::Pop); // Nettoyer la condition finale
+
+        self.loop_stack.pop();
     }
 
     // Compile une liste d'instructions en gérant le nettoyage des variables locales (Scope)

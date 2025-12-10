@@ -5,7 +5,7 @@ use std::str::Chars;
 pub enum TokenKind {
     True, False, Null,
     Try, Catch, Throw,
-    Var, If, Else, While, For, Func, Return, Print, Input, Class, New, Extends, Import, Break, Switch, Case, Default,
+    Var, If, Else, While, For, Func, Return, Print, Input, Class, New, Extends, Import, Break, Continue, Switch, Case, Default,
     Identifier(String), StringLiteral(String), Integer(i64), Float(f64),
     Plus, Minus, Star, Slash, Percent,
     Eq, EqEq, Neq, Lt, Gt, LtEq, GtEq,
@@ -344,6 +344,7 @@ impl<'a> Lexer<'a> {
             "catch" => TokenKind::Catch,
             "throw" => TokenKind::Throw,
             "namespace" => TokenKind::Namespace,
+            "continue" => TokenKind::Continue,
             _ => TokenKind::Identifier(s),
         };
 

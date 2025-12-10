@@ -304,6 +304,8 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
         },
         
         "break" => Ok(Instruction::ExpressionStatement(Expression::Literal(Value::Null))),
+
+        "continue" => Ok(Instruction::Continue),
         
         _ => Err(format!("Instruction inconnue: {}", command)),
     }?;
