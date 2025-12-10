@@ -1,0 +1,14 @@
+print "--- TEST SUCRE SYNTAXIQUE ---"
+
+var i = 0
+i++
+print "i (attendu 1) : " + i
+
+i += 10
+print "i (attendu 11) : " + i
+
+var obj = { val: 5 }
+obj.val += 5 
+print "obj.val (attendu 10) : " + obj.get("val") 
+// Note: Le parser transforme-t-il obj.val += 5 correctement avec des Dicts ? 
+// C'est souvent un point de friction (obj.get("val") + 5 ne peut pas être assigné via set).

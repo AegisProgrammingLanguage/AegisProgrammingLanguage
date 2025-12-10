@@ -1,0 +1,18 @@
+print "--- TEST SHORT CIRCUIT ---"
+
+func crash() {
+    print "❌ ERREUR : Cette fonction ne devrait pas être appelée !"
+    throw "Short circuit failed"
+}
+
+// 1. OR : Si gauche est Vrai, on ne touche pas à droite
+if (true || crash()) {
+    print "✅ OR Short-circuit OK"
+}
+
+// 2. AND : Si gauche est Faux, on ne touche pas à droite
+if (false && crash()) {
+    // rien
+} else {
+    print "✅ AND Short-circuit OK"
+}

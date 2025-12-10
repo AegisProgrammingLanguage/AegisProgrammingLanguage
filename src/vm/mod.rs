@@ -880,16 +880,36 @@ impl VM {
         let obj_idx = self.stack.len() - 1 - arg_count;
         let obj = self.stack[obj_idx].clone();
 
-        // 1. Instance Methods (POO) - Inchangé
+        // 1. Instance Methods (POO)
         if let Value::Instance(inst) = &obj {
-             let class_val = inst.borrow().class.clone();
-             if let Value::Class(rc_class) = &*class_val {
-                 if let Some(method_val) = rc_class.methods.get(&method_name) {
-                     self.stack[obj_idx] = method_val.clone();
-                     self.stack.insert(obj_idx + 1, obj.clone()); 
-                     self.call_value(method_val.clone(), arg_count + 1)?; 
-                     return Ok(()); // On laisse la boucle principale continuer
+             // On commence par la classe de l'instance
+             let mut current_class_val = inst.borrow().class.clone();
+             
+             // Boucle de recherche (Prototype Chain)
+             loop {
+                 if let Value::Class(rc_class) = &*current_class_val {
+                     // A. Est-ce que la méthode est ici ?
+                     if let Some(method_val) = rc_class.methods.get(&method_name) {
+                         self.stack[obj_idx] = method_val.clone();
+                         self.stack.insert(obj_idx + 1, obj.clone()); 
+                         self.call_value(method_val.clone(), arg_count + 1)?; 
+                         return Ok(()); // Trouvé et appelé !
+                     }
+                     
+                     // B. Sinon, a-t-on un parent ?
+                     if let Some(parent_name) = &rc_class.parent {
+                         // On cherche la classe parente dans les globales
+                         if let Some(parent_class) = self.get_global_by_name(parent_name) {
+                             // On remonte d'un cran
+                             current_class_val = Rc::new(parent_class);
+                             continue;
+                         } else {
+                             return Err(format!("Classe parente introuvable : '{}'", parent_name).into());
+                         }
+                     }
                  }
+                 // Si on arrive ici, c'est qu'on n'a pas trouvé et qu'il n'y a plus de parent
+                 break; 
              }
         }
 
@@ -1230,5 +1250,11 @@ impl VM {
         };
 
         format!("[Line {}] Error: {}", line, message)
+    }
+
+    fn get_global_by_name(&self, name: &str) -> Option<Value> {
+        let global_id = self.global_names.borrow().get(name).cloned()?;
+        let val = self.globals.get(global_id as usize)?;
+        if matches!(val, Value::Null) { None } else { Some(val.clone()) }
     }
 }

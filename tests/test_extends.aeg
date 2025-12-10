@@ -1,0 +1,12 @@
+print "--- TEST HERITAGE ---"
+
+class Animal(name) {
+    speak() { print this.name + " fait du bruit." }
+}
+
+class Dog(name) extends Animal {
+    // Pas de méthode speak ici, elle doit venir de Animal
+}
+
+var d = new Dog("Medor")
+d.speak() // Si ça plante, l'héritage est cassé.
