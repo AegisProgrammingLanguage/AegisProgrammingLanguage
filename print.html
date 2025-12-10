@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3e71406e.js";
+            window.path_to_searchindex_js = "searchindex-b68f18df.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-5dffcd49.js"></script>
+        <script src="toc-ce36d0ad.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1537,6 +1537,116 @@ if (Random.float() &lt; 0.5) {
 var players = ["Alice", "Bob", "Charlie"]
 var winner = Random.choice(players)
 print "The winner is: " + winner
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="socket-tcp-networking"><a class="header" href="#socket-tcp-networking">Socket (TCP Networking)</a></h1>
+<p>The Socket module provides low-level access to TCP networking. Unlike the <code>Http</code> module which is designed for high-level requests, <code>Socket</code> allows you to create your own servers or implement custom protocols.</p>
+<p><strong>Import:</strong> <code>import "stdlib/socket.aeg"</code></p>
+<h2 id="server-functions"><a class="header" href="#server-functions">Server Functions</a></h2>
+<p>To accept incoming connections, you must first create a listener.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Socket.listen(host, port)</code></td><td style="text-align: left">Binds a TCP listener to the address. Returns a <strong>Server ID</strong>.</td></tr>
+<tr><td style="text-align: left"><code>Socket.accept(server_id)</code></td><td style="text-align: left"><strong>Blocks</strong> execution until a client connects. Returns a <strong>Client ID</strong>.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="client-functions"><a class="header" href="#client-functions">Client Functions</a></h2>
+<p>To connect to a remote server.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Socket.connect(host, port)</code></td><td style="text-align: left">Establishes a connection to a remote address. Returns a <strong>Client ID</strong>.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="data-transmission"><a class="header" href="#data-transmission">Data Transmission</a></h2>
+<p>These functions work with <strong>Client IDs</strong> (returned by <code>accept</code> or <code>connect</code>).</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Socket.read(id, size)</code></td><td style="text-align: left">Reads up to <code>size</code> bytes from the stream. Returns a String.</td></tr>
+<tr><td style="text-align: left"><code>Socket.write(id, data)</code></td><td style="text-align: left">Writes the string <code>data</code> to the stream.</td></tr>
+<tr><td style="text-align: left"><code>Socket.close(id)</code></td><td style="text-align: left">Closes the connection (or the listener).</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="example-1-simple-echo-server"><a class="header" href="#example-1-simple-echo-server">Example 1: Simple Echo Server</a></h2>
+<p>A basic server that listens on port 9000, reads a message, prints it, and closes.</p>
+<pre><code class="language-aegis">import "stdlib/socket.aeg"
+
+var server = Socket.listen("127.0.0.1", 9000)
+print "Listening on 9000..."
+
+while (true) {
+    // 1. Wait for connection
+    var client = Socket.accept(server)
+    print "Client connected!"
+
+    // 2. Read data (max 128 bytes)
+    var msg = Socket.read(client, 128)
+    print "Received: " + msg
+
+    // 3. Send response and close
+    Socket.write(client, "Message received.")
+    Socket.close(client)
+}
+</code></pre>
+<h2 id="example-2-building-a-web-server"><a class="header" href="#example-2-building-a-web-server">Example 2: Building a Web Server</a></h2>
+<p>Since Aegis handles strings efficiently, you can implement a basic HTTP server in just a few lines of code.</p>
+<pre><code class="language-aegis">import "stdlib/socket.aeg"
+import "stdlib/time.aeg"
+
+var HOST = "127.0.0.1"
+var PORT = 8080
+
+var server = Socket.listen(HOST, PORT)
+print "HTTP Server running on http://" + HOST + ":" + PORT
+
+while (true) {
+    var client = Socket.accept(server)
+    
+    // Read the HTTP Request
+    var request = Socket.read(client, 1024)
+    
+    // Simple parsing to get the path (e.g., "GET /home HTTP/1.1")
+    var parts = request.split(" ")
+    if (parts.len() &gt; 1) {
+        var method = parts.at(0)
+        var path = parts.at(1)
+        print method + " " + path
+    
+        // Build HTTP Response Body
+        var body = "&lt;h1&gt;Hello from Aegis!&lt;/h1&gt;"
+        body += "&lt;p&gt;You requested: " + path + "&lt;/p&gt;"
+        
+        // Build Headers
+        var response = "HTTP/1.1 200 OK\r\n"
+        response += "Content-Type: text/html; charset=utf-8\r\n"
+        response += "Content-Length: " + body.len() + "\r\n"
+        response += "Connection: close\r\n"
+        response += "\r\n" // End of headers
+        
+        // Combine
+        response += body
+    
+        Socket.write(client, response)
+    }
+    
+    // Close the connection
+    Socket.close(client)
+}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="testing-framework"><a class="header" href="#testing-framework">Testing Framework</a></h1>
