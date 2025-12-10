@@ -53,11 +53,6 @@ enum Commands {
         token: String
     },
     
-    /// Lance les tests unitaires d'un fichier - Toujours sur v1 pour l'instant
-    Test {
-        file: String
-    },
-    
     // La commande Vm a été supprimée.
 }
 
@@ -178,10 +173,6 @@ fn main() -> Result<(), String> {
         Some(Commands::Login { token }) => {
             package_manager::login(token)
         },
-        
-        Some(Commands::Test { file }) => {
-            run_tests(file)
-        },
     }
 }
 
@@ -270,71 +261,4 @@ fn run_repl() {
             }
         }
     }
-}
-
-// NOTE: Les tests utilisent encore le moteur v1 pour l'instant
-fn run_tests(filename: &str) -> Result<(), String> {
-    println!("🧪 Lancement des tests pour : {}", filename);
-
-    let content = fs::read_to_string(filename)
-        .map_err(|e| format!("Impossible de lire {}: {}", filename, e))?;
-
-    let json_data = if filename.ends_with(".aeg") {
-        compiler::compile(&content)?
-    } else {
-        serde_json::from_str(&content).map_err(|e| e.to_string())?
-    };
-    
-    let instructions = loader::parse_block(&json_data)?;
-    let env = Environment::new_global();
-
-    for instr in instructions {
-        if let Err(e) = interpreter::execute(&instr, env.clone()) {
-            return Err(format!("Erreur lors du chargement du script : {}", e));
-        }
-    }
-
-    let tests_val = env.borrow().get_variable("__AEGIS_TESTS")
-        .ok_or("Aucun test trouvé (Avez-vous importé 'stdlib/test.aeg' ?)")?;
-
-    let tests_list = match tests_val {
-        aegis_core::Value::List(l) => l,
-        _ => return Err("Le registre des tests est corrompu".into())
-    };
-
-    let tests = tests_list.borrow();
-    println!("📝 {} tests détectés.\n", tests.len());
-
-    let mut passed = 0;
-    let mut failed = 0;
-
-    for (i, test_func) in tests.iter().enumerate() {
-        print!("Test #{} ... ", i + 1);
-        io::stdout().flush().unwrap();
-
-        let res = interpreter::apply_func(test_func.clone(), vec![], env.clone());
-
-        match res {
-            Ok(_) => {
-                println!("✅ OK");
-                passed += 1;
-            },
-            Err(e) => {
-                println!("❌ ECHEC");
-                println!("   └─ {}", e);
-                failed += 1;
-            }
-        }
-    }
-
-    println!("\n--- RÉSULTATS ---");
-    println!("Total : {}", tests.len());
-    println!("Succès: {}", passed);
-    println!("Echecs: {}", failed);
-
-    if failed > 0 {
-        return Err("Certains tests ont échoué.".into());
-    }
-    
-    Ok(())
 }
