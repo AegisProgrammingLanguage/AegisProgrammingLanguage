@@ -8,7 +8,7 @@ Built in **Rust**, it features a lightning-fast Bytecode Virtual Machine (VM), a
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
 ---
-
+ 
 ## ⚡ Why Aegis?
 
 ### 🚀 High Performance
