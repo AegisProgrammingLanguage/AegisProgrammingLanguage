@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5acf0017.js";
+            window.path_to_searchindex_js = "../searchindex-3e71406e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-5dffcd49.js"></script>
@@ -206,6 +206,9 @@ print fruits.at(99) // null
 <tr><td><code>.push(value)</code></td><td>Adds an element to the end of the list.</td><td><code>list.push(5)</code></td></tr>
 <tr><td><code>.pop()</code></td><td>Removes and returns the last element.</td><td><code>var last = list.pop()</code></td></tr>
 <tr><td><code>.len()</code></td><td>Returns the number of elements.</td><td><code>list.len()</code></td></tr>
+<tr><td><code>.reverse()</code></td><td>Reverses elements <strong>in-place</strong> and returns the list itself.</td><td><code>list.reverse().at(0)</code></td></tr>
+<tr><td><code>.contains(val)</code></td><td>Returns <code>true</code> if the value exists in the list.</td><td><code>if (list.contains("admin")) { ... }</code></td></tr>
+<tr><td><code>.join(sep)</code></td><td>Joins all elements into a single string using a separator.</td><td><code>list.join(", ")</code></td></tr>
 </tbody>
 </table>
 </div>
