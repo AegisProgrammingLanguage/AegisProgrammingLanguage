@@ -1,0 +1,14 @@
+namespace Base64 {
+    func encode(str) { 
+        return b64_encode(str) 
+    }
+    func decode(str) { 
+        return b64_decode(str) 
+    }
+}
+
+namespace Hash {
+    func sha256(str) { 
+        return hash_sha256(str) 
+    }
+}

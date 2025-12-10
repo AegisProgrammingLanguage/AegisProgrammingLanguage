@@ -17,6 +17,7 @@ pub fn init_registry() {
     process::register(&mut map);
     path::register(&mut map);
     regex::register(&mut map);
+    crypto::register(&mut map);
 
     let _ = REGISTRY.set(RwLock::new(map));
 }
@@ -72,3 +73,4 @@ mod core;
 mod process;
 mod path;
 mod regex;
+mod crypto;
