@@ -67,3 +67,38 @@ switch (status) {
         print "Unknown status"
 }
 ```
+
+## Loop Control: Break and Continue
+
+You can finely control the execution of loops using `break` and `continue`.
+
+### Break
+
+Stops the loop immediately and resumes execution after the loop block.
+
+```aegis
+// Stop searching when we find the target
+var target = 5
+for (i, 0, 10, 1) {
+    if (i == target) {
+        print "Found it!"
+        break
+    }
+}
+```
+
+Continue
+
+Skips the rest of the current iteration and jumps directly to the next one (checking the condition in `while`, or incrementing in `for`).
+
+```aegis
+// Print only odd numbers
+for (i, 0, 10, 1) {
+    // If even, skip printing
+    if (i % 2 == 0) { 
+        continue 
+    }
+    print i
+}
+// Output: 1, 3, 5, 7, 9
+```
