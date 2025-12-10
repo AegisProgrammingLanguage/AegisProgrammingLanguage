@@ -15,10 +15,15 @@ print first + " " + second // "Hello World"
 ## Methods
 | Method | Description |
 |--- |--- |
-| .len() | Returns the length of the string. |
-| .trim() | Removes whitespace from both ends. |
-| .replace(old, new) | Replaces all occurrences of a substring. |
-| .split(delimiter) | Splits the string into a List of substrings. |
+| `.len()` | Returns the length of the string. |
+| `.trim()` | Removes whitespace from both ends. |
+| `.upper()` | Converts the entire string to uppercase. |
+| `.lower()` | Converts the entire string to lowercase. |
+| `.contains(sub)` | Returns `true` if the string contains the substring. |
+| `.starts_with(sub)` | Returns `true` if the string starts with the substring. |
+| `.ends_with(sub)` | Returns `true` if the string ends with the substring. |
+| `.replace(old, new)` | Replaces all occurrences of a substring. |
+| `.split(delimiter)` | Splits the string into a List of substrings. |
 
 ### Examples
 Cleaning Input

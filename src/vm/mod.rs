@@ -928,6 +928,27 @@ impl VM {
                     l.borrow().get(idx).cloned().unwrap_or(Value::Null) 
                 },
                 "len" => Value::Integer(l.borrow().len() as i64),
+
+                "reverse" => {
+                    l.borrow_mut().reverse();
+                    Value::List(l.clone())
+                },
+
+                "contains" => {
+                    let target = &args[0];
+                    let exists = l.borrow().contains(target); // Nécessite que Value implémente PartialEq (c'est le cas)
+                    Value::Boolean(exists)
+                },
+
+                "join" => {
+                    let sep = if args.is_empty() { "".to_string() } else { args[0].as_str().unwrap_or_default() };
+                    
+                    let list_borrow = l.borrow();
+                    // On convertit tout en string et on joint
+                    let strings: Vec<String> = list_borrow.iter().map(|v| v.to_string()).collect();
+                    
+                    Value::String(strings.join(&sep))
+                },
                 
                 // --- FUNCTIONAL PROGRAMMING ---
                 
@@ -995,11 +1016,29 @@ impl VM {
             Value::String(s) => match method_name.as_str() {
                 "len" => Value::Integer(s.len() as i64),
                 
+                // --- Transformation ---
                 "trim" => {
                     // Rust fait ça très bien nativement
                     Value::String(s.trim().to_string())
                 },
+                "upper" => Value::String(s.to_uppercase()),
+                "lower" => Value::String(s.to_lowercase()),
 
+                // --- Analyse ---
+                "contains" => { // NOUVEAU
+                    let sub = args[0].as_str().unwrap_or_default();
+                    Value::Boolean(s.contains(&sub))
+                },
+                "starts_with" => { // NOUVEAU
+                    let sub = args[0].as_str().unwrap_or_default();
+                    Value::Boolean(s.starts_with(&sub))
+                },
+                "ends_with" => { // NOUVEAU
+                    let sub = args[0].as_str().unwrap_or_default();
+                    Value::Boolean(s.ends_with(&sub))
+                },
+
+                // --- Modification ---
                 "replace" => {
                     if args.len() < 2 { return Err("String.replace attend 2 arguments (old, new)".into()); }
                     

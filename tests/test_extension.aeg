@@ -1,0 +1,43 @@
+print "--- TEST EXTENSIONS ---"
+
+var logs = [
+    "[INFO] Server started",
+    "[ERROR] Connection lost",
+    "[INFO] User logged in",
+    "[WARN] High memory usage"
+]
+
+print "1. Analyse des logs :"
+
+// Utilisation de filter + starts_with
+var errors = logs.filter(func(line) {
+    return line.starts_with("[ERROR]")
+})
+
+print "Erreurs trouvees : " + errors.len()
+print " - " + errors.at(0)
+
+print ""
+print "2. Transformation :"
+
+// Utilisation de map + lower + replace
+var tags = logs.map(func(line) {
+    var parts = line.split("]") // Coupe à "]"
+    var tag = parts.at(0).replace("[", "") // Enleve "["
+    return tag.lower()
+})
+
+print "Tags extraits : " + tags
+
+print ""
+print "3. Formatage :"
+
+// Utilisation de join
+var csv = tags.join(", ")
+print "CSV Tags : " + csv
+
+print ""
+print "4. Verification :"
+if (tags.contains("warn")) {
+    print "Attention requise !"
+}

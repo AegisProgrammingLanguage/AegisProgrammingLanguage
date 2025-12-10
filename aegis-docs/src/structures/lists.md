@@ -38,6 +38,9 @@ You can add and remove elements dynamically.
 | `.push(value)` | Adds an element to the end of the list. | `list.push(5)` |
 | `.pop()` | Removes and returns the last element. | `var last = list.pop()` |
 | `.len()` | Returns the number of elements. | `list.len()` |
+| `.reverse()` | Reverses elements **in-place** and returns the list itself. | `list.reverse().at(0)` |
+| `.contains(val)` | Returns `true` if the value exists in the list. | `if (list.contains("admin")) { ... }` |
+| `.join(sep)` | Joins all elements into a single string using a separator. | `list.join(", ")` |
 
 ### Example
 ```
