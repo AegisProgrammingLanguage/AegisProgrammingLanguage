@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b68f18df.js";
+            window.path_to_searchindex_js = "../searchindex-daaade7a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ce36d0ad.js"></script>
@@ -225,6 +225,31 @@ switch (status) {
     default:
         print "Unknown status"
 }
+</code></pre>
+<h2 id="loop-control-break-and-continue"><a class="header" href="#loop-control-break-and-continue">Loop Control: Break and Continue</a></h2>
+<p>You can finely control the execution of loops using <code>break</code> and <code>continue</code>.</p>
+<h3 id="break"><a class="header" href="#break">Break</a></h3>
+<p>Stops the loop immediately and resumes execution after the loop block.</p>
+<pre><code class="language-aegis">// Stop searching when we find the target
+var target = 5
+for (i, 0, 10, 1) {
+    if (i == target) {
+        print "Found it!"
+        break
+    }
+}
+</code></pre>
+<p>Continue</p>
+<p>Skips the rest of the current iteration and jumps directly to the next one (checking the condition in <code>while</code>, or incrementing in <code>for</code>).</p>
+<pre><code class="language-aegis">// Print only odd numbers
+for (i, 0, 10, 1) {
+    // If even, skip printing
+    if (i % 2 == 0) { 
+        continue 
+    }
+    print i
+}
+// Output: 1, 3, 5, 7, 9
 </code></pre>
 
                     </main>
