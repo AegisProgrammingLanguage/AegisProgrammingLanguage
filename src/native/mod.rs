@@ -14,6 +14,9 @@ pub fn init_registry() {
     json::register(&mut map);
     http::register(&mut map);
     core::register(&mut map);
+    process::register(&mut map);
+    path::register(&mut map);
+    regex::register(&mut map);
 
     let _ = REGISTRY.set(RwLock::new(map));
 }
@@ -66,3 +69,6 @@ mod system;
 mod json;
 mod http;
 mod core;
+mod process;
+mod path;
+mod regex;

@@ -1,0 +1,13 @@
+namespace Regex {
+    func new(pattern) {
+        return re_new(pattern)
+    }
+
+    func test(re_id, text) {
+        return re_match(re_id, text)
+    }
+
+    func replace(re_id, text, replacement) {
+        return re_replace(re_id, text, replacement)
+    }
+}

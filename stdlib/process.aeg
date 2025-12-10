@@ -1,0 +1,10 @@
+namespace Process {
+    // Exécute une commande et attend la fin
+    // Retourne { code, stdout, stderr }
+    func exec(cmd, args) {
+        if (args == null) {
+            args = []
+        }
+        return proc_exec(cmd, args)
+    }
+}

@@ -1,0 +1,11 @@
+namespace Path {
+    func join(a, b) { 
+        return path_join(a, b) 
+    }
+    func extension(p) { 
+        return path_ext(p) 
+    }
+    func exists(p) { 
+        return path_exists(p) 
+    }
+}
