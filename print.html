@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-daaade7a.js";
+            window.path_to_searchindex_js = "searchindex-9e7bdb3a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ce36d0ad.js"></script>
+        <script src="toc-621ee4a4.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1103,6 +1103,71 @@ rect.scale(2)
 print "New Width: " + rect.width // 20
 print "New Area: " + rect.area() // 800
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="inheritance"><a class="header" href="#inheritance">Inheritance</a></h1>
+<p>Inheritance is a fundamental concept in Object-Oriented Programming that allows a class (the <strong>Child</strong>) to derive behavior and properties from another class (the <strong>Parent</strong>).</p>
+<p>In Aegis, inheritance is achieved using the <code>extends</code> keyword.</p>
+<h2 id="basic-inheritance"><a class="header" href="#basic-inheritance">Basic Inheritance</a></h2>
+<p>When a class extends another, it automatically gains access to all methods defined in the parent class.</p>
+<pre><code class="language-aegis">// The Parent Class
+class Animal(name) {
+    speak() {
+        print this.name + " makes a generic noise."
+    }
+    
+    sleep() {
+        print this.name + " is sleeping."
+    }
+}
+
+// The Child Class
+class Dog(name) extends Animal {
+    // Dog creates its own scope but inherits 'speak' and 'sleep'
+    
+    fetch() {
+        print this.name + " runs after the ball!"
+    }
+}
+
+var d = new Dog("Rex")
+
+d.fetch() // "Rex runs after the ball!" (Defined in Dog)
+d.speak() // "Rex makes a generic noise." (Inherited from Animal)
+</code></pre>
+<h2 id="method-overriding"><a class="header" href="#method-overriding">Method Overriding</a></h2>
+<p>A child class can provide its own implementation of a method that already exists in the parent class. This is called Overriding.</p>
+<p>When you call a method, Aegis looks for it in the current class first. If found, it executes it. If not, it looks in the parent class.</p>
+<pre><code class="language-aegis">class Cat(name) extends Animal {
+    // Overriding the 'speak' method
+    speak() {
+        print "Meow!"
+    }
+}
+
+var c = new Cat("Luna")
+c.speak() // "Meow!" (The parent's method is ignored)
+c.sleep() // "Luna is sleeping." (Still uses the parent's method)
+</code></pre>
+<p>The Prototype Chain</p>
+<h2 id="aegis-supports-multi-level-inheritance-a-class-can-inherit-from-a-class-that-inherits-from-another-class"><a class="header" href="#aegis-supports-multi-level-inheritance-a-class-can-inherit-from-a-class-that-inherits-from-another-class">Aegis supports multi-level inheritance. A class can inherit from a class that inherits from another class.</a></h2>
+<pre><code class="language-aegis">class LivingBeing(age) { 
+    is_alive() { return true } 
+}
+
+class Animal(name, age) extends LivingBeing { 
+    // ... 
+}
+
+class Dog(name, age, breed) extends Animal { 
+    // ... 
+}
+
+var d = new Dog("Buddy", 5, "Golden")
+
+// Dog -&gt; Animal -&gt; LivingBeing -&gt; Found!
+print d.is_alive() // true
+</code></pre>
+<p><em>Note: Currently, Aegis supports Single Inheritance (a class can only extend one parent).</em></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="composition-pattern"><a class="header" href="#composition-pattern">Composition Pattern</a></h1>
 <p>Aegis promotes flexible design patterns. While inheritance creates rigid hierarchies (“is-a” relationship), <strong>Composition</strong> allows you to build complex objects by combining simpler ones (“has-a” relationship).</p>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Standard Library - The Aegis Book</title>
+        <title>Inheritance - The Aegis Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,35 +174,80 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="standard-library"><a class="header" href="#standard-library">Standard Library</a></h1>
-<p>Aegis follows a “batteries-included” philosophy. The Standard Library provides a comprehensive set of modules to interact with the operating system, the network, and data formats.</p>
-<p>These modules are built directly into the Aegis binary or shipped as core extensions.</p>
-<h2 id="available-modules"><a class="header" href="#available-modules">Available Modules</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th style="text-align: left">Module</th><th style="text-align: left">Import Path</th><th style="text-align: left">Description</th></tr>
-</thead>
-<tbody>
-<tr><td style="text-align: left"><strong>System</strong></td><td style="text-align: left"><code>stdlib/system.aeg</code></td><td style="text-align: left">Args, Environment vars, CLI tools.</td></tr>
-<tr><td style="text-align: left"><strong>File</strong></td><td style="text-align: left"><code>stdlib/fs.aeg</code></td><td style="text-align: left">Read/Write files and Path manipulation.</td></tr>
-<tr><td style="text-align: left"><strong>Http</strong></td><td style="text-align: left"><code>stdlib/http.aeg</code></td><td style="text-align: left">Web client (GET, POST).</td></tr>
-<tr><td style="text-align: left"><strong>Json</strong></td><td style="text-align: left"><code>stdlib/json.aeg</code></td><td style="text-align: left">Parsing and stringifying JSON.</td></tr>
-<tr><td style="text-align: left"><strong>Math</strong></td><td style="text-align: left"><code>stdlib/math.aeg</code></td><td style="text-align: left">Advanced math and trigonometry.</td></tr>
-<tr><td style="text-align: left"><strong>Test</strong></td><td style="text-align: left"><code>stdlib/test.aeg</code></td><td style="text-align: left">Unit testing framework.</td></tr>
-</tbody>
-</table>
-</div>
+                        <h1 id="inheritance"><a class="header" href="#inheritance">Inheritance</a></h1>
+<p>Inheritance is a fundamental concept in Object-Oriented Programming that allows a class (the <strong>Child</strong>) to derive behavior and properties from another class (the <strong>Parent</strong>).</p>
+<p>In Aegis, inheritance is achieved using the <code>extends</code> keyword.</p>
+<h2 id="basic-inheritance"><a class="header" href="#basic-inheritance">Basic Inheritance</a></h2>
+<p>When a class extends another, it automatically gains access to all methods defined in the parent class.</p>
+<pre><code class="language-aegis">// The Parent Class
+class Animal(name) {
+    speak() {
+        print this.name + " makes a generic noise."
+    }
+    
+    sleep() {
+        print this.name + " is sleeping."
+    }
+}
+
+// The Child Class
+class Dog(name) extends Animal {
+    // Dog creates its own scope but inherits 'speak' and 'sleep'
+    
+    fetch() {
+        print this.name + " runs after the ball!"
+    }
+}
+
+var d = new Dog("Rex")
+
+d.fetch() // "Rex runs after the ball!" (Defined in Dog)
+d.speak() // "Rex makes a generic noise." (Inherited from Animal)
+</code></pre>
+<h2 id="method-overriding"><a class="header" href="#method-overriding">Method Overriding</a></h2>
+<p>A child class can provide its own implementation of a method that already exists in the parent class. This is called Overriding.</p>
+<p>When you call a method, Aegis looks for it in the current class first. If found, it executes it. If not, it looks in the parent class.</p>
+<pre><code class="language-aegis">class Cat(name) extends Animal {
+    // Overriding the 'speak' method
+    speak() {
+        print "Meow!"
+    }
+}
+
+var c = new Cat("Luna")
+c.speak() // "Meow!" (The parent's method is ignored)
+c.sleep() // "Luna is sleeping." (Still uses the parent's method)
+</code></pre>
+<p>The Prototype Chain</p>
+<h2 id="aegis-supports-multi-level-inheritance-a-class-can-inherit-from-a-class-that-inherits-from-another-class"><a class="header" href="#aegis-supports-multi-level-inheritance-a-class-can-inherit-from-a-class-that-inherits-from-another-class">Aegis supports multi-level inheritance. A class can inherit from a class that inherits from another class.</a></h2>
+<pre><code class="language-aegis">class LivingBeing(age) { 
+    is_alive() { return true } 
+}
+
+class Animal(name, age) extends LivingBeing { 
+    // ... 
+}
+
+class Dog(name, age, breed) extends Animal { 
+    // ... 
+}
+
+var d = new Dog("Buddy", 5, "Golden")
+
+// Dog -&gt; Animal -&gt; LivingBeing -&gt; Found!
+print d.is_alive() // true
+</code></pre>
+<p><em>Note: Currently, Aegis supports Single Inheritance (a class can only extend one parent).</em></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../modularity/errors.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../oop/methods.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../stdlib/system.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../oop/composition.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -212,11 +257,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../modularity/errors.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../oop/methods.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../stdlib/system.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../oop/composition.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
