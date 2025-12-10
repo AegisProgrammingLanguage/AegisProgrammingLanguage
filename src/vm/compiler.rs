@@ -83,6 +83,11 @@ impl Compiler {
     }
 
     fn compile_expression(&mut self, expr: Expression) {
+        if let Some(val) = self.evaluate_constant(&expr) {
+            self.emit_constant(val);
+            return;
+        }
+
         match expr {
             Expression::Literal(val) => self.emit_constant(val),
             Expression::Add(left, right) => {
@@ -873,5 +878,119 @@ impl Compiler {
         // 2. On nettoie la table des symboles (Compile-time)
         // On retire toutes les variables qui ont un index >= initial_locals_count
         self.locals.retain(|_, &mut idx| idx < initial_locals_count as u8);
+    }
+
+    // Tente de réduire une expression constante
+    fn evaluate_constant(&self, expr: &Expression) -> Option<Value> {
+        match expr {
+            // 1. Valeurs littérales (Feuilles de l'arbre)
+            Expression::Literal(v) => Some(v.clone()),
+            
+            // 2. Arithmétique de base
+            Expression::Add(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => Some(Value::Integer(a + b)),
+                    (Some(Value::Float(a)), Some(Value::Float(b))) => Some(Value::Float(a + b)),
+                    (Some(Value::String(a)), Some(Value::String(b))) => Some(Value::String(format!("{}{}", a, b))),
+                    _ => None
+                }
+            },
+            
+            Expression::Sub(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => Some(Value::Integer(a - b)),
+                    (Some(Value::Float(a)), Some(Value::Float(b))) => Some(Value::Float(a - b)),
+                    _ => None
+                }
+            },
+
+            Expression::Mul(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => Some(Value::Integer(a * b)),
+                    (Some(Value::Float(a)), Some(Value::Float(b))) => Some(Value::Float(a * b)),
+                    _ => None
+                }
+            },
+
+            Expression::Div(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => {
+                        if b == 0 { None } else { Some(Value::Integer(a / b)) }
+                    },
+                    (Some(Value::Float(a)), Some(Value::Float(b))) => Some(Value::Float(a / b)),
+                    _ => None
+                }
+            },
+
+            // 3. Modulo
+            Expression::Modulo(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => {
+                        if b == 0 { None } else { Some(Value::Integer(a % b)) }
+                    },
+                    (Some(Value::Float(a)), Some(Value::Float(b))) => Some(Value::Float(a % b)),
+                    _ => None
+                }
+            },
+
+            // 4. Opérateurs Bitwise (Entiers uniquement)
+            Expression::BitAnd(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => Some(Value::Integer(a & b)),
+                    _ => None
+                }
+            },
+            Expression::BitOr(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => Some(Value::Integer(a | b)),
+                    _ => None
+                }
+            },
+            Expression::BitXor(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => Some(Value::Integer(a ^ b)),
+                    _ => None
+                }
+            },
+
+            // 5. Shifts (Entiers uniquement, avec conversion safe vers u32)
+            Expression::ShiftLeft(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => {
+                        // Rust panic si shift < 0 ou shift >= bits du type.
+                        // On ne fold que si le shift est sûr.
+                        if let Ok(shift) = u32::try_from(b) {
+                            if shift < 64 { return Some(Value::Integer(a << shift)); }
+                        }
+                        None
+                    },
+                    _ => None
+                }
+            },
+            Expression::ShiftRight(left, right) => {
+                match (self.evaluate_constant(left), self.evaluate_constant(right)) {
+                    (Some(Value::Integer(a)), Some(Value::Integer(b))) => {
+                        if let Ok(shift) = u32::try_from(b) {
+                            if shift < 64 { return Some(Value::Integer(a >> shift)); }
+                        }
+                        None
+                    },
+                    _ => None
+                }
+            },
+
+            // 6. Unaire (Not)
+            Expression::Not(expr) => {
+                match self.evaluate_constant(expr) {
+                    Some(Value::Boolean(b)) => Some(Value::Boolean(!b)),
+                    // En Aegis, !null est souvent true, mais restons stricts pour le folding :
+                    Some(Value::Null) => Some(Value::Boolean(true)), 
+                    _ => None
+                }
+            },
+
+            // Tout ce qui contient une variable, un appel de fonction, etc. n'est pas constant
+            _ => None,
+        }
     }
 }

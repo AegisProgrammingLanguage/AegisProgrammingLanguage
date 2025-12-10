@@ -1,0 +1,10 @@
+print "TEST CONSTANT FOLDING"
+
+var x = 2 + 3 * 4
+var y = 5 + 4 / 2
+
+print x
+print y
+
+var z = x + y
+print z

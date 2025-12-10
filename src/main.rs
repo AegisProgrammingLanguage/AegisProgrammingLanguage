@@ -25,6 +25,10 @@ enum Commands {
     Run {
         /// Le chemin du fichier .aeg
         file: String,
+
+        /// Affiche le bytecode généré avant l'exécution
+        #[arg(long, short)] // Permet --debug ou -d
+        debug: bool,
         
         /// Arguments à passer au script (accessibles via System.args())
         /// Note: L'intégration des args dans la VM v2 reste à faire.
@@ -149,8 +153,8 @@ fn main() -> Result<(), String> {
 
     match &cli.command {
         // La commande RUN utilise maintenant la VM v2
-        Some(Commands::Run { file, args: _ }) => {
-            run_file(file)
+        Some(Commands::Run { file, debug, args: _ }) => {
+            run_file(file, *debug)
         }
 
         Some(Commands::Repl) | None => {
@@ -175,7 +179,7 @@ fn main() -> Result<(), String> {
 }
 
 // Nouvelle implémentation utilisant la VM v2
-fn run_file(filename: &str) -> Result<(), String> {
+fn run_file(filename: &str, debug: bool) -> Result<(), String> {
     let content = fs::read_to_string(filename)
         .map_err(|e| format!("Impossible de lire {}: {}", filename, e))?;
 
@@ -193,9 +197,12 @@ fn run_file(filename: &str) -> Result<(), String> {
     let compiler = aegis_core::vm::compiler::Compiler::new();
     let (chunk, global_names) = compiler.compile(statements);
 
-    // Debug: Décommenter pour voir le bytecode généré lors d'un simple run
-    // use aegis_core::vm::debug;
-    // debug::disassemble_chunk(&chunk, &format!("EXECUTION DE {}", filename));
+    if debug {
+        use aegis_core::vm::debug;
+        println!("\n=== DEBUG: BYTECODE GENERATED ===");
+        debug::disassemble_chunk(&chunk, filename);
+        println!("=================================\n");
+    }
 
     let mut script_args = Vec::new();
     // On filtre le "--" s'il est présent en premier
@@ -210,7 +217,6 @@ fn run_file(filename: &str) -> Result<(), String> {
     // 5. Exécution VM
     let mut vm = VM::new(chunk, global_names, script_args);
     
-    // On pourrait passer 'args' à la VM ici dans le futur
     vm.run()
 }
 
