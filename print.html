@@ -1,0 +1,2085 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The Aegis Book</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-a6895381.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-5dffcd49.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Aegis Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="the-aegis-programming-language"><a class="header" href="#the-aegis-programming-language">The Aegis Programming Language</a></h1>
+<p><strong>Aegis</strong> is a dynamic, high-performance scripting language designed for modern systems automation, game scripting, and rapid prototyping.</p>
+<p>Built in <strong>Rust</strong>, it features a lightning-fast Bytecode Virtual Machine (VM), a gradual typing system, and a rich standard library “batteries included.”</p>
+<p><img src="https://img.shields.io/badge/version-v0.2.0-blue.svg" alt="Aegis Version">
+<img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build Status"></p>
+<hr>
+<h2 id="-why-aegis"><a class="header" href="#-why-aegis">⚡ Why Aegis?</a></h2>
+<h3 id="-high-performance"><a class="header" href="#-high-performance">🚀 High Performance</a></h3>
+<p>Powered by a custom <strong>Stack-Based Virtual Machine</strong>, Aegis v0.2.0 is exponentially faster than its predecessors. It handles heavy recursion and complex algorithms with ease (benchmarked at ~250ms for Fib30, rivaling optimized dynamic runtimes).</p>
+<h3 id="-robust--safe"><a class="header" href="#-robust--safe">🛡️ Robust &amp; Safe</a></h3>
+<p>Aegis combines the flexibility of dynamic typing with the safety of <strong>Gradual Typing</strong>. You can prototype fast using <code>var x = 10</code>, then secure your critical code with <code>var x: int = 10</code>.
+Plus, the robust <code>try/catch</code> mechanism ensures your scripts handle errors gracefully.</p>
+<h3 id="-modular--modern"><a class="header" href="#-modular--modern">📦 Modular &amp; Modern</a></h3>
+<ul>
+<li><strong>Functional</strong>: First-class support for Lambdas, Closures, <code>map</code>, and <code>filter</code>.</li>
+<li><strong>Object-Oriented</strong>: Clean Class syntax with methods and state.</li>
+<li><strong>Organized</strong>: Native support for <strong>Namespaces</strong> and <strong>Imports</strong>.</li>
+</ul>
+<h3 id="-batteries-included"><a class="header" href="#-batteries-included">🔋 Batteries Included</a></h3>
+<p>Aegis comes with a comprehensive Standard Library out of the box:</p>
+<ul>
+<li><strong>HTTP Client</strong> for web interactions.</li>
+<li><strong>JSON</strong> parsing and serialization.</li>
+<li><strong>File System</strong> manipulation.</li>
+<li><strong>Regex</strong> support.</li>
+<li><strong>SQLite</strong> integration (via plugins).</li>
+</ul>
+<hr>
+<h2 id="a-taste-of-aegis"><a class="header" href="#a-taste-of-aegis">A Taste of Aegis</a></h2>
+<p>Here is a glimpse of what Aegis code looks like:</p>
+<pre><code class="language-aegis">import "stdlib/http.aeg"
+import "stdlib/json.aeg"
+
+// A Class representing a User
+class User(name, id) {
+    info() {
+        return "User: " + this.name + " (ID: " + this.id + ")"
+    }
+}
+
+// Fetching data from an API
+try {
+    print "Fetching data..."
+    var response = Http.get("https://jsonplaceholder.typicode.com/users/1")
+    var data = Json.parse(response)
+
+    // Creating an object
+    var user = new User(data.get("name"), data.get("id"))
+    
+    print "✅ Success!"
+    print user.info()
+
+} catch (e) {
+    print "❌ Error: " + e
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
+<p>Welcome to the Aegis journey. This section will guide you through the initial steps of setting up your development environment and running your first scripts.</p>
+<p>We will cover:</p>
+<ol>
+<li><strong>Installation</strong>: How to get the Aegis binary on your machine.</li>
+<li><strong>Hello World</strong>: Writing and executing your first script.</li>
+<li><strong>The REPL</strong>: Using the interactive shell for quick testing.</li>
+<li><strong>Package Manager</strong>: Managing dependencies for larger projects.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
+<p>Currently, Aegis is distributed as source code. To install it, you need to compile the project locally using <strong>Rust</strong>.</p>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<p>Before proceeding, ensure you have the following installed on your machine:</p>
+<ul>
+<li><code>Git</code>: To clone the repository. Download Git</li>
+<li><code>Rust</code> &amp; <code>Cargo</code>: To build the language. The easiest way to install Rust is via rustup.
+<ul>
+<li>Linux / macOS: <code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></li>
+<li>Windows: Download <code>rustup-init.exe</code> from rust-lang.org.</li>
+</ul>
+</li>
+</ul>
+<h2 id="step-by-step-guide"><a class="header" href="#step-by-step-guide">Step-by-Step Guide</a></h2>
+<h3 id="1-clone-the-repository"><a class="header" href="#1-clone-the-repository">1. Clone the Repository</a></h3>
+<p>Open your terminal and clone the Aegis source code:</p>
+<pre><code class="language-bash">git clone https://github.com/AegisProgrammingLanguage/AegisProgrammingLanguage.git
+cd aegis
+</code></pre>
+<h3 id="2-build-and-install"><a class="header" href="#2-build-and-install">2. Build and Install</a></h3>
+<p>Use <code>cargo</code> to compile the project in release mode and install the binary globally on your system.</p>
+<pre><code class="language-bash">cargo install --path .
+</code></pre>
+<p>This process might take a minute or two as it downloads dependencies (like <code>tokio</code>, <code>reqwest</code>, etc.) and optimizes the build.</p>
+<h3 id="3-verify-installation"><a class="header" href="#3-verify-installation">3. Verify Installation</a></h3>
+<p>Once the compilation is complete, <code>cargo</code> places the aegis binary in your generic Cargo bin folder (usually <code>~/.cargo/bin</code>). This folder should be in your system <code>PATH</code> automatically if you installed Rust via <code>rustup</code>.</p>
+<p>To verify that Aegis is correctly installed, run:</p>
+<pre><code class="language-bash">aegis --version
+</code></pre>
+<p>You should see an output similar to:</p>
+<pre><code>aegis 0.2.0
+</code></pre>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<p>“Command not found: aegis”</p>
+<p>If the installation finished successfully but the command is not found:</p>
+<ul>
+<li>Ensure <code>~/.cargo/bin</code> (Linux/Mac) or <code>%USERPROFILE%\.cargo\bin</code> (Windows) is in your system <strong>PATH</strong>.</li>
+<li>Restart your terminal session to refresh the environment variables.</li>
+</ul>
+<h2 id="build-errors-on-linux"><a class="header" href="#build-errors-on-linux">Build Errors on Linux</a></h2>
+<p>Since Aegis depends on <code>openssl</code> (via the HTTP module) and sometimes system libraries, you might need to install development packages on Linux (Ubuntu/Debian example):</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install build-essential pkg-config libssl-dev
+</code></pre>
+<h2 id="updating-aegis"><a class="header" href="#updating-aegis">Updating Aegis</a></h2>
+<p>To update to the latest version of Aegis, pull the latest changes from Git and force a re-installation:</p>
+<pre><code class="language-bash">git pull origin master
+cargo install --path . --force
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="hello-world"><a class="header" href="#hello-world">Hello World</a></h1>
+<p>Now that you have Aegis installed, it’s time to write your first program. This is the traditional “Hello World” test to ensure everything is working correctly.</p>
+<h3 id="1-create-a-script"><a class="header" href="#1-create-a-script">1. Create a Script</a></h3>
+<p>Create a new file named <code>hello.aeg</code> in your favorite text editor or IDE.</p>
+<p>Add the following line to the file:</p>
+<pre><code class="language-aegis">print "Hello, World!"
+</code></pre>
+<h3 id="2-run-the-script"><a class="header" href="#2-run-the-script">2. Run the Script</a></h3>
+<p>Open your terminal, navigate to the folder where you saved the file, and run the following command:</p>
+<pre><code class="language-bash">aegis run hello.aeg
+</code></pre>
+<h3 id="3-output"><a class="header" href="#3-output">3. Output</a></h3>
+<p>You should see the following output in your terminal:</p>
+<pre><code>Hello, World!
+</code></pre>
+<p>If you see this message, congratulations! You have successfully compiled and executed your first Aegis program.</p>
+<h3 id="going-further-interaction"><a class="header" href="#going-further-interaction">Going Further: Interaction</a></h3>
+<p>Let’s try something slightly more complex. Aegis has a built-in <code>input</code> instruction to interact with the user.</p>
+<p>Update your <code>hello.aeg</code> file with the following code:</p>
+<pre><code class="language-aegis">print "--- Aegis Greeter ---"
+
+// Ask for the user's name
+input name "What is your name? "
+
+// String concatenation
+print "Welcome to Aegis, " + name + "!"
+</code></pre>
+<p>Run it again:</p>
+<pre><code class="language-bash">aegis run hello.aeg
+</code></pre>
+<p>Example interaction:</p>
+<pre><code>--- Aegis Greeter ---
+What is your name? Ethan
+Welcome to Aegis, Ethan!
+</code></pre>
+<p>What just happened?</p>
+<ul>
+<li><code>print</code>: Displays text to the standard output (console).</li>
+<li><code>input</code>: Pauses execution, waits for the user to type text and press Enter, and stores the result in the variable name.</li>
+<li><code>+</code>: Joins (concatenates) the strings together.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="the-repl"><a class="header" href="#the-repl">The REPL</a></h1>
+<h3 id="-status-note-v020"><a class="header" href="#-status-note-v020">⚠️ Status Note (v0.2.0)</a></h3>
+<p>The Interactive REPL is currently under active migration to the new <code>v0.2.0</code> Bytecode Virtual Machine.</p>
+<p>In the current release, the REPL relies on the legacy engine or might be temporarily unavailable. For reliable results and performance, we strongly recommend writing your code in <code>.aeg</code> files and using the <code>aegis run</code> command.</p>
+<h2 id="what-is-a-repl"><a class="header" href="#what-is-a-repl">What is a REPL?</a></h2>
+<p>REPL stands for Read-Eval-Print Loop. It is an interactive shell that allows you to type Aegis code and see the results immediately, without creating a file.</p>
+<p>It is typically used for:</p>
+<ul>
+<li>Testing small snippets of logic.</li>
+<li>Doing quick calculations.</li>
+<li>Exploring the available Standard Library functions.</li>
+</ul>
+<h2 id="starting-a-session"><a class="header" href="#starting-a-session">Starting a Session</a></h2>
+<p>To enter the interactive mode, run the repl command:</p>
+<pre><code class="language-bash">aegis repl
+</code></pre>
+<p>Or simply run the executable without arguments:</p>
+<pre><code class="language-bash">aegis
+</code></pre>
+<p>You will see the prompt &gt;&gt; waiting for your input.</p>
+<h2 id="usage-example"><a class="header" href="#usage-example">Usage Example</a></h2>
+<p>Concept of a typical session once the migration is complete:</p>
+<pre><code class="language-bash">Aegis v0.2.0 - Interactive Mode
+Type 'exit' or 'quit' to leave.
+
+&gt;&gt; var a = 10
+&gt;&gt; var b = 5
+&gt;&gt; print a * b
+50
+
+&gt;&gt; func greet(name) { return "Hello " + name }
+&gt;&gt; print greet("User")
+Hello User
+</code></pre>
+<h2 id="exiting"><a class="header" href="#exiting">Exiting</a></h2>
+<p>To exit the REPL and return to your system terminal, type:</p>
+<pre><code>exit
+</code></pre>
+<p>Or <code>quit</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="package-manager-apm"><a class="header" href="#package-manager-apm">Package Manager (apm)</a></h1>
+<p>Modern development relies heavily on reusing existing code and libraries. Aegis comes with a built-in Package Manager (often referred to as APM) to manage your project’s dependencies, ensuring you can easily install, update, and publish modules.</p>
+<h2 id="the-project-manifest-aegistoml"><a class="header" href="#the-project-manifest-aegistoml">The Project Manifest: aegis.toml</a></h2>
+<p>Every Aegis project starts with a manifest file named <code>aegis.toml</code> at the root of your directory. This file describes your project and lists the external packages it needs.</p>
+<p>Here is an example of a typical <code>aegis.toml</code> file:</p>
+<pre><code class="language-Ini TOML">[package]
+name = "my_rpg_game"
+version = "0.1.0"
+authors = ["You &lt;you@example.com&gt;"]
+
+[dependencies]
+glfw = "1.0.0"
+sqlite = "0.2.0"
+http = "*"
+</code></pre>
+<ul>
+<li>
+<p><code>[package]</code>: Metadata about your project.</p>
+</li>
+<li>
+<p><code>[dependencies]</code>: A list of packages to install from the Aegis Registry.</p>
+</li>
+</ul>
+<h2 id="managing-dependencies"><a class="header" href="#managing-dependencies">Managing Dependencies</a></h2>
+<h3 id="adding-a-package"><a class="header" href="#adding-a-package">Adding a Package</a></h3>
+<p>To add a new library to your project, use the <code>add</code> command. This will download the package and automatically add it to your <code>aegis.toml</code> file.</p>
+<pre><code class="language-bash">aegis add glfw
+</code></pre>
+<p>You can also specify a version:</p>
+<pre><code class="language-bash">aegis add sqlite 1.0.4
+</code></pre>
+<h3 id="installation-folder"><a class="header" href="#installation-folder">Installation Folder</a></h3>
+<p>When you add a dependency, Aegis downloads the files into a <code>packages/</code> directory at the root of your project.</p>
+<p>Project Structure:</p>
+<pre><code>my_project/
+├── aegis.toml       &lt;-- Manifest
+├── src/
+│   └── main.aeg     &lt;-- Your code
+└── packages/        &lt;-- Managed by APM
+    ├── glfw/
+    └── sqlite/
+</code></pre>
+<p><em>Note: You should generally add <code>packages/</code> to your <code>.gitignore</code> file, similar to <code>node_modules</code> in JavaScript or <code>target</code> in Rust.</em></p>
+<h3 id="using-installed-packages"><a class="header" href="#using-installed-packages">Using Installed Packages</a></h3>
+<p>Once a package is installed, you can use it in your scripts using the <code>import</code> statement. Since packages are stored locally in the <code>packages</code> folder, the path is straightforward.</p>
+<pre><code class="language-aegis">// Importing the GLFW library installed via APM
+import "packages/glfw/glfw.aeg"
+
+// Importing SQLite
+import "packages/sqlite/sqlite.aeg"
+
+func main() {
+    // Use the namespace defined in the package
+    var db = Sqlite.open("game.db")
+    print "Database opened!"
+}
+
+main()
+</code></pre>
+<h2 id="publishing-a-package"><a class="header" href="#publishing-a-package">Publishing a Package</a></h2>
+<p>If you have created a library and want to share it with the world, APM makes it easy.</p>
+<h3 id="1-authentication"><a class="header" href="#1-authentication">1. Authentication</a></h3>
+<p>First, you need to authenticate with the Aegis Registry using your token.</p>
+<pre><code class="language-bash">aegis login &lt;your-api-token&gt;
+</code></pre>
+<h3 id="2-publishing"><a class="header" href="#2-publishing">2. Publishing</a></h3>
+<p>Ensure your <code>aegis.toml</code> is correctly configured with a unique name and version, then run:</p>
+<pre><code>aegis publish
+</code></pre>
+<p>This will upload your code (excluding ignored files) to the registry, making it available for everyone to <code>aegis add</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="aegis-cheat-sheet"><a class="header" href="#aegis-cheat-sheet">Aegis Cheat Sheet</a></h1>
+<p>A quick reference guide for the Aegis syntax (v0.2.0).</p>
+<h2 id="variables--types"><a class="header" href="#variables--types">Variables &amp; Types</a></h2>
+<pre><code class="language-aegis">var name = "Aegis"        // Dynamic
+var count: int = 42       // Typed (Gradual)
+var pi: float = 3.14
+var is_live = true
+var nothing = null
+</code></pre>
+<h2 id="collections"><a class="header" href="#collections">Collections</a></h2>
+<pre><code class="language-aegis">// List
+var list = [1, 2, 3]
+list.push(4)
+var item = list.at(0)
+
+// Dict
+var user = { id: 1, name: "Admin" }
+var id = user.get("id")
+</code></pre>
+<h2 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h2>
+<pre><code>if (x &gt; 10) { ... } else { ... }
+
+while (running) { ... }
+
+for (i, 0, 10, 1) { ... } // Start (inc), End (exc), Step
+
+switch (val) {
+    case 1: print "One"
+    default: print "Other"
+}
+</code></pre>
+<h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
+<pre><code class="language-aegis">// Named
+func add(a, b) { return a + b }
+
+// Lambda
+var mult = func(a, b) { return a * b }
+
+// Decorator
+@logger
+func action() { ... }
+</code></pre>
+<h2 id="classes"><a class="header" href="#classes">Classes</a></h2>
+<pre><code class="language-aegis">class Hero(name, hp) {
+    heal(amount) {
+        this.hp = this.hp + amount
+    }
+}
+
+var h = new Hero("Link", 100)
+h.heal(20)
+</code></pre>
+<h2 id="modules"><a class="header" href="#modules">Modules</a></h2>
+<pre><code class="language-aegis">// File: lib.aeg
+namespace Lib {
+    var version = "1.0"
+}
+
+// File: main.aeg
+import "lib.aeg"
+print Lib.version
+</code></pre>
+<h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
+<pre><code class="language-aegis">try {
+    throw "Oops"
+} catch (e) {
+    print e
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="language-basics"><a class="header" href="#language-basics">Language Basics</a></h1>
+<p>Aegis is designed to be familiar to developers who know C, Java, JavaScript, or Python. It uses a clean, brace-based syntax with optional semicolons.</p>
+<p>In this section, we will explore the fundamental building blocks of the language:</p>
+<ul>
+<li><strong>Variables</strong>: How to store state.</li>
+<li><strong>Types</strong>: Dynamic vs Gradual typing.</li>
+<li><strong>Control Flow</strong>: Making decisions and looping (<code>if</code>, <code>while</code>, <code>for</code>, <code>switch</code>).</li>
+<li><strong>Comments</strong>: Documenting your code.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="variables--data-types"><a class="header" href="#variables--data-types">Variables &amp; Data Types</a></h1>
+<p>Aegis is a <strong>dynamically typed</strong> language. This means you do not need to specify the type of a variable when you declare it, and a variable can hold values of different types throughout its life (unless you use Gradual Typing, see the next chapter).</p>
+<h2 id="declaration"><a class="header" href="#declaration">Declaration</a></h2>
+<p>To declare a variable, use the <code>var</code> keyword:</p>
+<pre><code class="language-aegis">var username = "Admin"
+var score = 100
+var is_active = true
+</code></pre>
+<h2 id="reassignment"><a class="header" href="#reassignment">Reassignment</a></h2>
+<p>You can change the value of a variable at any time:</p>
+<pre><code class="language-aegis">var data = 42
+print data // 42
+
+data = "Changed to string"
+print data // Changed to string
+</code></pre>
+<h2 id="primitive-types"><a class="header" href="#primitive-types">Primitive Types</a></h2>
+<p>Aegis supports the following primitive data types:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td>Null</td><td>Represents the absence of value.</td><td><code>null</code></td></tr>
+<tr><td>Boolean</td><td>Logical true or false.</td><td><code>true</code>, <code>false</code></td></tr>
+<tr><td>Integer</td><td>64-bit signed integer.</td><td><code>42</code>, <code>-10</code>, <code>0</code></td></tr>
+<tr><td>Float</td><td>64-bit floating point number.</td><td><code>3.14</code>, <code>-0.01</code></td></tr>
+<tr><td>String</td><td>UTF-8 text sequence.</td><td><code>"Hello World"</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Note: Lists and Dictionaries are complex types and are covered in the Data Structures section.</em></p>
+<h2 id="string-interpolation"><a class="header" href="#string-interpolation">String Interpolation</a></h2>
+<p>You can inject variables directly into strings using the ${} syntax. This converts the value to a string automatically.</p>
+<pre><code class="language-aegis">var name = "Aegis"
+var version = 0.2
+
+print "Welcome to ${name} version ${version}!"
+// Output: Welcome to Aegis version 0.2!
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="gradual-typing"><a class="header" href="#gradual-typing">Gradual Typing</a></h1>
+<p>While dynamic typing is great for prototyping, large applications often require more safety. Aegis offers <strong>Gradual Typing</strong>, allowing you to enforce types on specific variables or function arguments.</p>
+<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
+<p>To enforce a type, add a colon <code>:</code> followed by the type name after the variable name.</p>
+<pre><code class="language-aegis">// This variable MUST be an integer
+var count: int = 0
+
+// This works fine
+count = 10 
+
+// This throws a Runtime Error:
+// count = "ten" 
+</code></pre>
+<h2 id="supported-type-keywords"><a class="header" href="#supported-type-keywords">Supported Type Keywords</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Matches</th></tr>
+</thead>
+<tbody>
+<tr><td><code>int</code></td><td>Integers</td></tr>
+<tr><td><code>float</code></td><td>Floating point numbers</td></tr>
+<tr><td><code>string</code></td><td>Strings</td></tr>
+<tr><td><code>bool</code></td><td>Booleans</td></tr>
+<tr><td><code>list</code></td><td>Lists (Arrays)</td></tr>
+<tr><td><code>dict</code></td><td>Dictionaries (Maps)</td></tr>
+<tr><td><code>func</code></td><td>Functions</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="typing-in-functions"><a class="header" href="#typing-in-functions">Typing in Functions</a></h2>
+<p>Gradual typing is particularly powerful in function signatures to ensure arguments and return values are correct.</p>
+<pre><code class="language-aegis">// Arguments must be floats, return value must be a float
+func divide(a: float, b: float) -&gt; float {
+    return a / b
+}
+
+var res = divide(10.0, 2.0) // Works
+// var err = divide(10, 2)  // Throws Error: Expected 'float', got '10' (int)
+</code></pre>
+<p><em>Note: Type checks happen at Runtime. If a type mismatch occurs, the Virtual Machine throws an exception that can be caught with try/catch.</em></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="control-flow-1"><a class="header" href="#control-flow-1">Control Flow</a></h1>
+<p>Aegis provides standard control structures to direct the flow of your program.</p>
+<h2 id="if--else"><a class="header" href="#if--else">If / Else</a></h2>
+<p>Standard conditional logic. The condition must evaluate to a boolean or a truthy value.</p>
+<pre><code class="language-aegis">var hp = 50
+
+if (hp &gt; 75) {
+    print "Healthy"
+} else if (hp &gt; 25) {
+    print "Injured"
+} else {
+    print "Critical condition!"
+}
+</code></pre>
+<h2 id="while-loop"><a class="header" href="#while-loop">While Loop</a></h2>
+<p>Repeats a block of code as long as the condition is true.</p>
+<pre><code class="language-aegis">var i = 3
+while (i &gt; 0) {
+    print "Countdown: " + i
+    i = i - 1
+}
+print "Liftoff!"
+</code></pre>
+<h2 id="for-range-loop"><a class="header" href="#for-range-loop">For Range Loop</a></h2>
+<p>Aegis uses a specific syntax for numeric iteration, optimized for the Virtual Machine.</p>
+<p>Syntax: <code>for (variable, start, end, step)</code></p>
+<ul>
+<li><code>variable</code>: The name of the loop counter (automatically created).</li>
+<li><code>start</code>: The starting value (inclusive).</li>
+<li><code>end</code>: The stopping value (exclusive).</li>
+<li><code>step</code>: The increment amount.</li>
+</ul>
+<pre><code class="language-aegis">// Print even numbers from 0 to 9
+for (i, 0, 10, 2) {
+    print "Number: " + i
+}
+</code></pre>
+<h2 id="switch"><a class="header" href="#switch">Switch</a></h2>
+<p>The switch statement simplifies long <code>if</code>/<code>else</code> chains. Aegis switches perform an implicit break (no fall-through).</p>
+<pre><code class="language-aegis">var status = 200
+
+switch (status) {
+    case 200:
+        print "OK"
+    case 404:
+        print "Not Found"
+    case 500:
+        print "Server Error"
+    default:
+        print "Unknown status"
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
+<p>Comments are lines of code ignored by the compiler. They are useful for documenting your code.</p>
+<h2 id="single-line-comments"><a class="header" href="#single-line-comments">Single Line Comments</a></h2>
+<p>Use <code>//</code> for single line comments. Everything after the slashes is ignored.</p>
+<pre><code class="language-aegis">var x = 10 // This is a variable
+// This entire line is a comment
+</code></pre>
+<h2 id="block-comments"><a class="header" href="#block-comments">Block Comments</a></h2>
+<p>Use <code>/*</code> to start and <code>*/</code> to end a block comment. This can span multiple lines.</p>
+<pre><code class="language-aegis">/*
+    This is a multi-line comment.
+    It is useful for describing complex logic
+    or temporarily disabling a block of code.
+*/
+var y = 20
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="style-guide--best-practices"><a class="header" href="#style-guide--best-practices">Style Guide &amp; Best Practices</a></h1>
+<p>To keep Aegis code clean and readable, we recommend following these conventions.</p>
+<h2 id="naming-conventions"><a class="header" href="#naming-conventions">Naming Conventions</a></h2>
+<ul>
+<li>
+<p><strong>Variables &amp; Functions</strong>: Use <code>snake_case</code>.</p>
+<pre><code class="language-aegis">var my_variable = 10
+func calculate_total() { ... }
+</code></pre>
+</li>
+<li>
+<p><strong>Classes</strong>: Use <code>PascalCase</code>.</p>
+<pre><code class="language-aegis">class GameManager { ... }
+</code></pre>
+</li>
+<li>
+<p><strong>Constants</strong>: Use <code>UPPER_SNAKE_CASE</code> inside Namespaces.</p>
+<pre><code class="language-aegis">namespace Config {
+    var MAX_RETRIES = 5
+}
+</code></pre>
+</li>
+</ul>
+<h2 id="file-structure"><a class="header" href="#file-structure">File Structure</a></h2>
+<ul>
+<li>Use <code>.aeg</code> extension for all scripts.</li>
+<li>Place reusable code in a <code>lib/</code> or <code>modules/</code> folder.</li>
+<li>Wrap library code in a <code>namespace</code> to avoid polluting the global scope.</li>
+</ul>
+<h2 id="error-handling-1"><a class="header" href="#error-handling-1">Error Handling</a></h2>
+<p>Prefer <code>try/catch</code> over checking for <code>null</code> when performing I/O operations (File, Network).</p>
+<pre><code class="language-aegis">// ✅ Good
+try {
+    var data = File.read("config.json")
+} catch (e) {
+    print "Config not found, using defaults."
+}
+
+// ❌ Avoid
+var data = File.read("config.json") // If fails, script crashes!
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="data-structures"><a class="header" href="#data-structures">Data Structures</a></h1>
+<p>Beyond simple numbers and booleans, real-world applications require organizing data into complex structures. Aegis provides three robust built-in structures:</p>
+<ol>
+<li><strong>Lists</strong>: Ordered, dynamic arrays of values.</li>
+<li><strong>Dictionaries</strong>: Key-value mappings (HashMaps).</li>
+<li><strong>Strings</strong>: Immutable sequences of characters with powerful manipulation methods.</li>
+</ol>
+<p>These structures are reference types and are managed automatically by the Aegis memory manager.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="lists"><a class="header" href="#lists">Lists</a></h1>
+<p>Lists are ordered collections of values. In Aegis, lists are dynamic (they can grow or shrink) and can hold values of mixed types.</p>
+<h2 id="creation"><a class="header" href="#creation">Creation</a></h2>
+<p>Use square brackets <code>[]</code> to create a list.</p>
+<pre><code class="language-aegus =">// Empty list
+var empty = []
+
+// Mixed types
+var numbers = [1, 2, 3, 4]
+var user = ["Admin", 42, true]
+</code></pre>
+<h2 id="accessing-elements"><a class="header" href="#accessing-elements">Accessing Elements</a></h2>
+<p>Lists are 0-indexed. Use the <code>.at(index)</code> method to retrieve an element.</p>
+<pre><code class="language-aegis">var fruits = ["Apple", "Banana", "Cherry"]
+
+print fruits.at(0) // Apple
+print fruits.at(2) // Cherry
+
+// Accessing an out-of-bounds index returns null
+print fruits.at(99) // null
+</code></pre>
+<h2 id="modifying-lists"><a class="header" href="#modifying-lists">Modifying Lists</a></h2>
+<p>You can add and remove elements dynamically.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.push(value)</code></td><td>Adds an element to the end of the list.</td><td><code>list.push(5)</code></td></tr>
+<tr><td><code>.pop()</code></td><td>Removes and returns the last element.</td><td><code>var last = list.pop()</code></td></tr>
+<tr><td><code>.len()</code></td><td>Returns the number of elements.</td><td><code>list.len()</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<pre><code>var stack = []
+
+stack.push("First")
+stack.push("Second")
+
+print stack.len() // 2
+
+print stack.pop() // "Second"
+print stack.len() // 1
+</code></pre>
+<p><em>Note: Lists in Aegis are passed by reference. If you pass a list to a function and modify it there, the original list is affected.</em></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="dictionaries"><a class="header" href="#dictionaries">Dictionaries</a></h1>
+<p>Dictionaries (or Maps) are collections of key-value pairs. They are useful for storing structured data or representing objects.</p>
+<h2 id="creation-1"><a class="header" href="#creation-1">Creation</a></h2>
+<p>Use curly braces <code>{}</code>. Keys must be strings (or identifiers which are converted to strings).</p>
+<pre><code class="language-aegis">var config = {
+    host: "localhost",
+    port: 8080,
+    debug: true
+}
+</code></pre>
+<h2 id="operations"><a class="header" href="#operations">Operations</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td>.get(key)</td><td>Returns the value associated with the key.</td><td>dict.get(“host”)</td></tr>
+<tr><td>.insert(key, val)</td><td>Adds or updates a key-value pair.</td><td>dict.insert(“ssl”, true)</td></tr>
+<tr><td>.keys()</td><td>Returns a List of all keys in the dictionary.</td><td>dict.keys()</td></tr>
+<tr><td>.len()</td><td>Returns the number of entries.</td><td>dict.len()</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-1"><a class="header" href="#example-1">Example</a></h3>
+<pre><code class="language-aegis">var user = {}
+
+// Adding data
+user.insert("name", "Arthur")
+user.insert("level", 5)
+
+// Retrieving data
+print "User: " + user.get("name")
+
+// Listing keys
+var fields = user.keys()
+print fields // ["name", "level"]
+</code></pre>
+<p><em>Note: Accessing a non-existent key with .get() returns null.</em></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="strings"><a class="header" href="#strings">Strings</a></h1>
+<p>Strings in Aegis are immutable sequences of UTF-8 characters. While they act like primitive types, they possess several built-in methods for manipulation.</p>
+<h2 id="basic-operations"><a class="header" href="#basic-operations">Basic Operations</a></h2>
+<p>You can concatenate strings using the <code>+</code> operator.</p>
+<pre><code class="language-aegis">var first = "Hello"
+var second = "World"
+print first + " " + second // "Hello World"
+</code></pre>
+<h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>.len()</td><td>Returns the length of the string.</td></tr>
+<tr><td>.trim()</td><td>Removes whitespace from both ends.</td></tr>
+<tr><td>.replace(old, new)</td><td>Replaces all occurrences of a substring.</td></tr>
+<tr><td>.split(delimiter)</td><td>Splits the string into a List of substrings.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<p>Cleaning Input</p>
+<pre><code class="language-aegis">var input = "   user@example.com   "
+var clean = input.trim()
+print clean // "user@example.com"
+</code></pre>
+<p>Replacement</p>
+<pre><code class="language-aegis">var text = "Hello World"
+print text.replace("World", "Aegis") // "Hello Aegis"
+</code></pre>
+<p>Parsing CSV-like data</p>
+<pre><code class="language-aegis">var csv = "apple,banana,orange"
+var items = csv.split(",")
+
+print items.len()   // 3
+print items.at(0)   // "apple"
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="functions--functional-programming"><a class="header" href="#functions--functional-programming">Functions &amp; Functional Programming</a></h1>
+<p>Functions are the heart of Aegis logic. They are <strong>first-class citizens</strong>, meaning they can be assigned to variables, passed as arguments, and returned from other functions.</p>
+<p>Aegis v0.2 heavily emphasizes <strong>Functional Programming</strong> paradigms alongside imperative code.</p>
+<p>This chapter covers:</p>
+<ul>
+<li><strong>Declarations</strong>: Standard named functions.</li>
+<li><strong>Lambdas</strong>: Anonymous functions and closures.</li>
+<li><strong>Decorators</strong>: Modifying function behavior dynamically.</li>
+<li><strong>Functional Tools</strong>: Processing data with <code>map</code>, <code>filter</code>, and <code>for_each</code>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="function-declaration"><a class="header" href="#function-declaration">Function Declaration</a></h1>
+<p>Functions are reusable blocks of code. In Aegis, functions are “first-class citizens,” meaning they can be stored in variables, passed as arguments, and returned from other functions.</p>
+<h2 id="syntax-1"><a class="header" href="#syntax-1">Syntax</a></h2>
+<p>Use the <code>func</code> keyword followed by a name, parameters in parentheses, and a block of code.</p>
+<pre><code class="language-aegis">func greet(name) {
+    print "Hello, " + name + "!"
+}
+
+// Calling the function
+greet("Alice")
+</code></pre>
+<h2 id="return-values"><a class="header" href="#return-values">Return Values</a></h2>
+<p>Use the <code>return</code> keyword to send a value back to the caller. If no return statement is provided, the function returns <code>null</code>.</p>
+<pre><code class="language-aegis">func add(a, b) {
+    return a + b
+}
+
+var result = add(5, 10)
+print result // 15
+</code></pre>
+<h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
+<p>Functions can call themselves. Thanks to the stack-based VM, Aegis handles recursion efficiently.</p>
+<pre><code class="language-aegis">func fib(n) {
+    if (n &lt; 2) { return n }
+    return fib(n - 1) + fib(n - 2)
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="lambdas--closures"><a class="header" href="#lambdas--closures">Lambdas &amp; Closures</a></h1>
+<p>Aegis supports anonymous functions, often called <strong>Lambdas</strong>. These are functions without a name, typically used for short operations or callbacks.</p>
+<h2 id="creating-a-lambda"><a class="header" href="#creating-a-lambda">Creating a Lambda</a></h2>
+<p>The syntax is identical to a standard function, but without the name.</p>
+<pre><code class="language-aegis">var say_hello = func() {
+    print "Hello from Lambda!"
+}
+
+// Execute the variable
+say_hello()
+</code></pre>
+<h2 id="closures-capturing-environment"><a class="header" href="#closures-capturing-environment">Closures (Capturing Environment)</a></h2>
+<p>Lambdas in Aegis are Closures. This means they can “capture” and remember variables from the scope in which they were defined, even after that scope has finished executing.</p>
+<pre><code class="language-aegis">func make_counter() {
+    var count = 0
+    
+    // This lambda captures 'count'
+    return func() {
+        count = count + 1
+        return count
+    }
+}
+
+var counter = make_counter()
+
+print counter() // 1
+print counter() // 2
+print counter() // 3
+</code></pre>
+<p><em>Note: Aegis v0.2 captures variables by value (snapshot) or by reference depending on implementation specifics. In the current version, complex logic inside closures is fully supported.</em></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="decorators"><a class="header" href="#decorators">Decorators</a></h1>
+<p>Decorators provide a clean syntax to modify or enhance the behavior of a function without changing its code. They are widely used for logging, access control, or performance measuring.</p>
+<h2 id="syntax-2"><a class="header" href="#syntax-2">Syntax</a></h2>
+<p>A decorator is simply a function that takes a function as an argument and returns a new function. You apply it using the <code>@</code> symbol.</p>
+<pre><code>// 1. Define the decorator
+func logger(target_func) {
+    return func(arg) {
+        print "[LOG] Calling function with: " + arg
+        var result = target_func(arg)
+        print "[LOG] Result: " + result
+        return result
+    }
+}
+
+// 2. Apply it
+@logger
+func square(x) {
+    return x * x
+}
+
+// 3. Use the decorated function
+square(5)
+</code></pre>
+<p>Output:</p>
+<pre><code>[LOG] Calling function with: 5
+[LOG] Result: 25
+</code></pre>
+<h2 id="how-it-works-internally"><a class="header" href="#how-it-works-internally">How it works internally</a></h2>
+<p>The <code>@</code> syntax is syntactic sugar. The code above is equivalent to:</p>
+<pre><code class="language-aegis">func square(x) { return x * x }
+square = logger(square)
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="functional-programming"><a class="header" href="#functional-programming">Functional Programming</a></h1>
+<p>Aegis provides built-in methods on <strong>Lists</strong> to process data using a functional style. This allows for cleaner, more expressive code compared to traditional loops.</p>
+<h2 id="map"><a class="header" href="#map">Map</a></h2>
+<p>Syntax: <code>map(callback)</code></p>
+<p>Creates a new list by applying a function to every element in the original list.</p>
+<pre><code class="language-aegis">var numbers = [1, 2, 3, 4]
+
+var doubled = numbers.map(func(n) {
+    return n * 2
+})
+
+print doubled // [2, 4, 6, 8]
+</code></pre>
+<h2 id="filter"><a class="header" href="#filter">Filter</a></h2>
+<p>Syntax: <code>filter(callback)</code></p>
+<p>Creates a new list containing only elements for which the callback returns true.</p>
+<pre><code class="language-aegis">var numbers = [10, 5, 20, 3]
+
+var big = numbers.filter(func(n) {
+    return n &gt; 8
+})
+
+print big // [10, 20]
+</code></pre>
+<h2 id="for-each"><a class="header" href="#for-each">For each</a></h2>
+<p>Syntax: <code>for_each(callback)</code></p>
+<p>Executes a function for every element in the list. Useful for side effects (like printing or saving).</p>
+<pre><code class="language-aegis">var names = ["Alice", "Bob"]
+
+names.for_each(func(name) {
+    print "User: " + name
+})
+</code></pre>
+<h2 id="chaining"><a class="header" href="#chaining">Chaining</a></h2>
+<p>Since map and filter return new Lists, you can chain them together.</p>
+<pre><code class="language-aegis">// Take 1..5, multiply by 10, keep those &gt; 20
+var res = [1, 2, 3, 4, 5]
+    .map(func(n) { return n * 10 })
+    .filter(func(n) { return n &gt; 20 })
+
+print res // [30, 40, 50]
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="object-oriented-programming"><a class="header" href="#object-oriented-programming">Object-Oriented Programming</a></h1>
+<p>Aegis supports Object-Oriented Programming (OOP) to help structure larger codebases and model complex data.</p>
+<p>The system is Class-based, supporting:</p>
+<ul>
+<li><strong>Classes</strong>: Blueprints for objects.</li>
+<li><strong>Instances</strong>: Objects created from classes.</li>
+<li><strong>Methods</strong>: Functions bound to specific objects using <code>this</code>.</li>
+<li><strong>Composition</strong>: Building complex objects from simpler ones.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="classes--instances"><a class="header" href="#classes--instances">Classes &amp; Instances</a></h1>
+<p>Object-Oriented Programming allows you to structure your code by bundling data (attributes) and behavior (methods) into reusable blueprints called <strong>Classes</strong>.</p>
+<h2 id="defining-a-class"><a class="header" href="#defining-a-class">Defining a Class</a></h2>
+<p>Use the <code>class</code> keyword. The parameters defined in the parentheses act as the <strong>Constructor arguments</strong>.</p>
+<pre><code class="language-aegis">// Defines a 'User' class with two properties: name and email
+class User(name, email) {
+    // The body of the class is executed when 'new' is called.
+    
+    // You can define methods here
+    print "Creating user: " + name
+}
+</code></pre>
+<h2 id="creating-instances"><a class="header" href="#creating-instances">Creating Instances</a></h2>
+<p>To create an object (an instance of a class), use the <code>new</code> keyword.</p>
+<pre><code class="language-aegis">var admin = new User("Alice", "alice@example.com")
+var guest = new User("Bob", "bob@example.com")
+</code></pre>
+<h2 id="fields-attributes"><a class="header" href="#fields-attributes">Fields (Attributes)</a></h2>
+<p>Aegis objects are dynamic. You can access and assign fields using the dot notation. The constructor parameters are automatically available as fields.</p>
+<pre><code class="language-aegis">print admin.name // "Alice"
+
+// Modifying a field
+admin.name = "SuperAlice"
+
+// Adding a new field dynamically
+admin.role = "Administrator"
+print admin.role // "Administrator"
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="methods--this"><a class="header" href="#methods--this">Methods &amp; this</a></h1>
+<p>Methods are functions defined inside a class. They define what an object can <em>do</em>.</p>
+<h2 id="defining-methods"><a class="header" href="#defining-methods">Defining Methods</a></h2>
+<p>Inside a class block, define functions as usual.</p>
+<pre><code class="language-aegis">class Rectangle(width, height) {
+    
+    func area() {
+        return this.width * this.height
+    }
+    
+    func scale(factor) {
+        this.width = this.width * factor
+        this.height = this.height * factor
+    }
+}
+</code></pre>
+<h2 id="the-this-keyword"><a class="header" href="#the-this-keyword">The this Keyword</a></h2>
+<p>Inside a method, the special variable <code>this</code> refers to the current instance calling the method. It allows you to access or modify the object’s properties.</p>
+<p><em>Important: To access a property inside a class, you must use <code>this.property</code>. Using just property would look for a local variable.</em></p>
+<p>Usage Example</p>
+<pre><code class="language-aegis">var rect = new Rectangle(10, 20)
+
+print "Area: " + rect.area() // 200
+
+rect.scale(2)
+print "New Width: " + rect.width // 20
+print "New Area: " + rect.area() // 800
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="composition-pattern"><a class="header" href="#composition-pattern">Composition Pattern</a></h1>
+<p>Aegis promotes flexible design patterns. While inheritance creates rigid hierarchies (“is-a” relationship), <strong>Composition</strong> allows you to build complex objects by combining simpler ones (“has-a” relationship).</p>
+<h2 id="concept"><a class="header" href="#concept">Concept</a></h2>
+<p>Instead of a class inheriting from another, it holds an instance of another class as a property.</p>
+<h2 id="example-game-entity"><a class="header" href="#example-game-entity">Example: Game Entity</a></h2>
+<p>Imagine building a game. Instead of a deep inheritance tree, you can compose an <code>Entity</code> using a <code>Position</code> and a <code>Stats</code> object.</p>
+<pre><code class="language-aegis">// Component 1: Position
+class Vector(x, y) {
+    func str() { return "(" + this.x + ", " + this.y + ")" }
+}
+
+// Component 2: Stats
+class Stats(hp, mana) {
+    func is_alive() { return this.hp &gt; 0 }
+}
+
+// Main Entity using Composition
+class Player(name, x, y) {
+    // We initialize components in the constructor logic (class body)
+    
+    this.pos = new Vector(x, y)
+    this.stats = new Stats(100, 50)
+    
+    func info() {
+        print this.name + " is at " + this.pos.str()
+    }
+    
+    func take_damage(amount) {
+        this.stats.hp = this.stats.hp - amount
+    }
+}
+</code></pre>
+<p>Usage</p>
+<pre><code>var p = new Player("Hero", 10, 10)
+
+p.info() // Hero is at (10, 10)
+
+p.take_damage(20)
+print "HP Left: " + p.stats.hp // 80
+</code></pre>
+<p>This approach makes your code modular and easier to test.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="modularity--system"><a class="header" href="#modularity--system">Modularity &amp; System</a></h1>
+<p>A script is rarely a single file. To build scalable applications, code must be organized into logical units and spread across multiple files.</p>
+<p>Aegis provides a robust module system:</p>
+<ul>
+<li><strong>Namespaces</strong>: Grouping related logic to avoid naming conflicts.</li>
+<li><strong>Imports</strong>: Loading code from other files with caching and scope isolation.</li>
+<li><strong>Error Handling</strong>: Managing runtime exceptions gracefully with <code>try</code>, <code>catch</code>, and <code>throw</code>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="namespaces"><a class="header" href="#namespaces">Namespaces</a></h1>
+<p>As your code grows, you might run into naming conflicts (e.g., two functions named <code>init</code>). <strong>Namespaces</strong> allow you to group related variables and functions under a unique name.</p>
+<h2 id="defining-a-namespace"><a class="header" href="#defining-a-namespace">Defining a Namespace</a></h2>
+<p>Use the <code>namespace</code> keyword followed by a name and a block of code.</p>
+<pre><code class="language-aegis">namespace Math {
+    var PI = 3.14159
+    
+    func square(x) {
+        return x * x
+    }
+    
+    func circle_area(r) {
+        // Accessing siblings: explicit access is recommended
+        return Math.PI * Math.square(r)
+    }
+}
+</code></pre>
+<h2 id="accessing-members"><a class="header" href="#accessing-members">Accessing Members</a></h2>
+<p>You can access the contents of a namespace using the dot <code>.</code> notation, just like an object or a dictionary.</p>
+<pre><code class="language-aegis">print Math.PI // 3.14159
+
+var area = Math.circle_area(10)
+print area // 314.159
+</code></pre>
+<p><em>Under the hood: In Aegis v0.2, a Namespace is compiled as a Dictionary containing the local variables defined in its scope.</em></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="import-system"><a class="header" href="#import-system">Import System</a></h1>
+<p>To organize code across multiple files, Aegis provides a powerful <code>import</code> statement.</p>
+<h2 id="syntax-3"><a class="header" href="#syntax-3">Syntax</a></h2>
+<pre><code class="language-aegis">import "path/to/module.aeg"
+</code></pre>
+<p>The path is a string relative to the current working directory.</p>
+<h2 id="how-imports-work"><a class="header" href="#how-imports-work">How Imports Work</a></h2>
+<p>When you import a file:</p>
+<ul>
+<li>Execution: The VM loads, compiles, and executes the file immediately.</li>
+<li>Scope Sharing: The imported file runs in the same global scope as your main program.</li>
+<li>Caching: Aegis caches imports. If you import the same file twice, it will not be re-executed.</li>
+</ul>
+<h2 id="organizing-with-namespaces"><a class="header" href="#organizing-with-namespaces">Organizing with Namespaces</a></h2>
+<p>Since imports share the global scope, the best practice is to wrap library code in a <code>namespace</code> to keep things clean.</p>
+<p>File: <code>lib/utils.aeg</code></p>
+<pre><code class="language-aegis">namespace Utils {
+    func hello() { return "Hello from module!" }
+}
+print "[Utils] Loaded."
+</code></pre>
+<p>File: <code>main.aeg</code></p>
+<pre><code class="language-aegis">import "lib/utils.aeg"
+
+// Using the namespace defined in the imported file
+print Utils.hello()
+</code></pre>
+<p>Output:</p>
+<pre><code>[Utils] Loaded.
+Hello from module!
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="error-handling-2"><a class="header" href="#error-handling-2">Error Handling</a></h1>
+<p>Scripts can fail (missing files, network errors, bad math). Aegis provides a robust <code>try/catch</code> mechanism to handle these situations gracefully instead of crashing the Virtual Machine.</p>
+<h2 id="try--catch"><a class="header" href="#try--catch">Try / Catch</a></h2>
+<p>Wrap risky code in a <code>try</code> block. If an error occurs, execution immediately jumps to the <code>catch</code> block.</p>
+<pre><code>try {
+    print "1. Doing something risky..."
+    var result = 10 / 0 // Division by zero error
+    print "2. This will not run."
+} catch (error) {
+    print "3. Error caught: " + error
+}
+
+print "4. Program continues."
+</code></pre>
+<p>Output:</p>
+<pre><code>1. Doing something risky...
+3. Error caught: Division by zero
+4. Program continues.
+</code></pre>
+<h2 id="throwing-errors"><a class="header" href="#throwing-errors">Throwing Errors</a></h2>
+<p>You can raise your own errors using the <code>throw</code> keyword. You can throw strings or any other value.</p>
+<pre><code class="language-aegis">func validate_age(age) {
+    if (age &lt; 0) {
+        throw "Age cannot be negative!"
+    }
+    return true
+}
+
+try {
+    validate_age(-5)
+} catch (e) {
+    print "Validation failed: " + e
+}
+</code></pre>
+<p><em>Note: Aegis native modules (like File or Http) throw exceptions when operations fail. You should wrap I/O operations in try/catch blocks.</em></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="standard-library"><a class="header" href="#standard-library">Standard Library</a></h1>
+<p>Aegis follows a “batteries-included” philosophy. The Standard Library provides a comprehensive set of modules to interact with the operating system, the network, and data formats.</p>
+<p>These modules are built directly into the Aegis binary or shipped as core extensions.</p>
+<h2 id="available-modules"><a class="header" href="#available-modules">Available Modules</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Module</th><th style="text-align: left">Import Path</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><strong>System</strong></td><td style="text-align: left"><code>stdlib/system.aeg</code></td><td style="text-align: left">Args, Environment vars, CLI tools.</td></tr>
+<tr><td style="text-align: left"><strong>File</strong></td><td style="text-align: left"><code>stdlib/fs.aeg</code></td><td style="text-align: left">Read/Write files and Path manipulation.</td></tr>
+<tr><td style="text-align: left"><strong>Http</strong></td><td style="text-align: left"><code>stdlib/http.aeg</code></td><td style="text-align: left">Web client (GET, POST).</td></tr>
+<tr><td style="text-align: left"><strong>Json</strong></td><td style="text-align: left"><code>stdlib/json.aeg</code></td><td style="text-align: left">Parsing and stringifying JSON.</td></tr>
+<tr><td style="text-align: left"><strong>Math</strong></td><td style="text-align: left"><code>stdlib/math.aeg</code></td><td style="text-align: left">Advanced math and trigonometry.</td></tr>
+<tr><td style="text-align: left"><strong>Test</strong></td><td style="text-align: left"><code>stdlib/test.aeg</code></td><td style="text-align: left">Unit testing framework.</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="system--process"><a class="header" href="#system--process">System &amp; Process</a></h1>
+<p>This module provides tools to interact with the operating system, environment variables, time, and external processes.</p>
+<h2 id="system"><a class="header" href="#system">System</a></h2>
+<p>Import: <code>import "stdlib/system.aeg"</code></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>System.args()</code></td><td style="text-align: left">Returns a List of command-line arguments passed to the script.</td></tr>
+<tr><td style="text-align: left"><code>System.env(key)</code></td><td style="text-align: left">Returns the value of an environment variable (or <code>null</code>).</td></tr>
+<tr><td style="text-align: left"><code>System.clear()</code></td><td style="text-align: left">Clears the console screen.</td></tr>
+<tr><td style="text-align: left"><code>System.fail(msg)</code></td><td style="text-align: left">Exits the program immediately with an error message.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="time"><a class="header" href="#time">Time</a></h2>
+<p>Import: <code>import "stdlib/time.aeg"</code></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Time.sleep(ms)</code></td><td style="text-align: left">Pauses execution for the specified milliseconds.</td></tr>
+<tr><td style="text-align: left"><code>Time.now()</code></td><td style="text-align: left">Returns the current system timestamp (integer).</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="date"><a class="header" href="#date">Date</a></h2>
+<p>Import: <code>import "stdlib/date.aeg"</code></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Date.now()</code></td><td style="text-align: left">Returns the current date as an ISO 8601 string.</td></tr>
+<tr><td style="text-align: left"><code>Date.format(fmt)</code></td><td style="text-align: left">Returns the current date formatted (e.g., <code>"%Y-%m-%d"</code>).</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="process"><a class="header" href="#process">Process</a></h2>
+<p>Import: <code>import "stdlib/process.aeg"</code></p>
+<p>Allows you to run shell commands.</p>
+<pre><code class="language-aegis">var output = Process.exec("git", ["status"])
+
+print "Exit Code: " + output.get("code")
+print "Stdout: " + output.get("stdout")
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Process.exec(cmd, args)</code></td><td style="text-align: left">Runs a command and returns a Dict {code, stdout, stderr}.</td></tr>
+<tr><td style="text-align: left"><code>Process.run(cmd)</code></td><td style="text-align: left">Helper that prints stdout and returns true if successful.</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="file-system-io"><a class="header" href="#file-system-io">File System (IO)</a></h1>
+<p>The File System module allows reading from and writing to the disk.</p>
+<h2 id="file-operations"><a class="header" href="#file-operations">File Operations</a></h2>
+<p>Import: <code>import "stdlib/file.aeg"</code></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>File.read(path)</code></td><td style="text-align: left">Reads the entire file content as a string. Throws if failed.</td></tr>
+<tr><td style="text-align: left"><code>File.write(path, content)</code></td><td style="text-align: left">Writes string content to a file (overwrites).</td></tr>
+<tr><td style="text-align: left"><code>File.exists(path)</code></td><td style="text-align: left">Returns <code>true</code> if the file or directory exists.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-2"><a class="header" href="#example-2">Example</a></h3>
+<pre><code class="language-aegis">var config_path = "settings.ini"
+
+if (File.exists(config_path)) {
+    var data = File.read(config_path)
+    print "Loaded: " + data
+} else {
+    File.write(config_path, "defaults")
+}
+</code></pre>
+<h2 id="path-manipulation"><a class="header" href="#path-manipulation">Path Manipulation</a></h2>
+<p>Import: <code>import "stdlib/path.aeg"</code></p>
+<p>It is highly recommended to use <code>Path</code> functions instead of concatenating strings manually, to ensure cross-platform compatibility (Windows vs Linux).</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Path.join(a, b)</code></td><td style="text-align: left">Joins two path segments (e.g., <code>dir/file.txt</code>).</td></tr>
+<tr><td style="text-align: left"><code>Path.extension(path)</code></td><td style="text-align: left">Returns the file extension (e.g., <code>txt</code>).</td></tr>
+<tr><td style="text-align: left"><code>Path.exists(path)</code></td><td style="text-align: left">Alias for File.exists.</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="network-http"><a class="header" href="#network-http">Network (HTTP)</a></h1>
+<p>Aegis includes a lightweight HTTP client for interacting with web APIs.</p>
+<p>Import: <code>import "stdlib/http.aeg"</code></p>
+<h2 id="methods-1"><a class="header" href="#methods-1">Methods</a></h2>
+<h3 id="http-get"><a class="header" href="#http-get">Http GET</a></h3>
+<p>Syntax: <code>Http.get(url)</code></p>
+<p>Performs a GET request.</p>
+<ul>
+<li><strong>Returns</strong>: The response body as a String.</li>
+<li><strong>Throws</strong>: An error if the connection fails or status is not 2xx.</li>
+</ul>
+<h3 id="http-post"><a class="header" href="#http-post">Http Post</a></h3>
+<p>Syntax: <code>Http.post(url, body)</code></p>
+<p>Performs a POST request.</p>
+<ul>
+<li><strong>body</strong>: String (payload).</li>
+</ul>
+<h2 id="example-fetching-an-api"><a class="header" href="#example-fetching-an-api">Example: Fetching an API</a></h2>
+<pre><code class="language-aegis">import "stdlib/http.aeg"
+
+try {
+    var response = Http.get("https://api.github.com/zen")
+    print "GitHub Zen: " + response
+} catch (e) {
+    print "Network Error: " + e
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="data-handling"><a class="header" href="#data-handling">Data Handling</a></h1>
+<p>Aegis provides robust tools for data serialization and pattern matching.</p>
+<h2 id="json"><a class="header" href="#json">JSON</a></h2>
+<p>Import: <code>import "stdlib/json.aeg"</code></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Json.parse(str)</code></td><td style="text-align: left">Parses a JSON string into Aegis Lists/Dicts.</td></tr>
+<tr><td style="text-align: left"><code>Json.stringify(val)</code></td><td style="text-align: left">Converts an Aegis value into a JSON string.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="regex"><a class="header" href="#regex">Regex</a></h2>
+<p>Import: <code>import "stdlib/regex.aeg"</code></p>
+<pre><code class="language-aegis">var re = Regex.new("^[0-9]+$")
+var is_digit = Regex.test(re, "12345") // true
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left">Regex.new(pattern)</td><td style="text-align: left">Compiles a regex pattern. Returns an ID.</td></tr>
+<tr><td style="text-align: left">Regex.test(id, str)</td><td style="text-align: left">Returns true if the string matches.</td></tr>
+<tr><td style="text-align: left">Regex.replace(id, str, repl)</td><td style="text-align: left">Replaces matches with the replacement string.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="crypto--encoding"><a class="header" href="#crypto--encoding">Crypto &amp; Encoding</a></h2>
+<p>Import: <code>import "stdlib/crypto.aeg"</code></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left">Base64.encode(str)</td><td style="text-align: left">Encodes a string to Base64.</td></tr>
+<tr><td style="text-align: left">Base64.decode(str)</td><td style="text-align: left">Decodes a Base64 string.</td></tr>
+<tr><td style="text-align: left">Hash.sha256(str)</td><td style="text-align: left">Computes the SHA-256 hash (hex string).</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="math--random"><a class="header" href="#math--random">Math &amp; Random</a></h1>
+<p>The Math module provides a collection of mathematical functions, constants, and a geometry class implemented directly in Aegis.</p>
+<p><strong>Import:</strong> <code>import "stdlib/math.aeg"</code></p>
+<h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
+<p>The module exposes common mathematical constants.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Constant</th><th style="text-align: left">Value</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Math.PI</code></td><td style="text-align: left"><code>3.14159...</code></td><td style="text-align: left">Ratio of a circle’s circumference to its diameter.</td></tr>
+<tr><td style="text-align: left"><code>Math.TAU</code></td><td style="text-align: left"><code>6.28318...</code></td><td style="text-align: left">Equal to <code>2 * PI</code>.</td></tr>
+<tr><td style="text-align: left"><code>Math.E</code></td><td style="text-align: left"><code>2.71828...</code></td><td style="text-align: left">Euler’s number.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="basic-utilities"><a class="header" href="#basic-utilities">Basic Utilities</a></h2>
+<p>Helper functions for everyday logic.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Math.abs(n)</code></td><td style="text-align: left">Returns the absolute (positive) value of <code>n</code>.</td></tr>
+<tr><td style="text-align: left"><code>Math.max(a, b)</code></td><td style="text-align: left">Returns the larger of two numbers.</td></tr>
+<tr><td style="text-align: left"><code>Math.min(a, b)</code></td><td style="text-align: left">Returns the smaller of two numbers.</td></tr>
+<tr><td style="text-align: left"><code>Math.is_even(n)</code></td><td style="text-align: left">Returns <code>true</code> if <code>n</code> is even.</td></tr>
+<tr><td style="text-align: left"><code>Math.is_odd(n)</code></td><td style="text-align: left">Returns <code>true</code> if <code>n</code> is odd.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="arithmetic--algebra"><a class="header" href="#arithmetic--algebra">Arithmetic &amp; Algebra</a></h2>
+<p>Advanced calculation functions.</p>
+<h3 id="power--roots"><a class="header" href="#power--roots">Power &amp; Roots</a></h3>
+<ul>
+<li><strong><code>Math.pow(base, exp)</code></strong>: Calculates <code>base</code> raised to the power of <code>exp</code>.</li>
+<li><strong><code>Math.sqrt(n)</code></strong>: Calculates the square root of <code>n</code> using the Newton-Raphson approximation method.
+<ul>
+<li><em>Note:</em> Returns <code>-1</code> if <code>n</code> is negative.</li>
+</ul>
+</li>
+</ul>
+<h3 id="number-theory"><a class="header" href="#number-theory">Number Theory</a></h3>
+<ul>
+<li><strong><code>Math.gcd(a, b)</code></strong>: Calculates the <strong>Greatest Common Divisor</strong> using the Euclidean algorithm.</li>
+<li><strong><code>Math.lcm(a, b)</code></strong>: Calculates the <strong>Least Common Multiple</strong>.</li>
+</ul>
+<pre><code class="language-javascript">print Math.pow(2, 3)  // 8
+print Math.sqrt(16)   // 4
+print Math.gcd(12, 18) // 6
+</code></pre>
+<h3 id="trigonometry"><a class="header" href="#trigonometry">Trigonometry</a></h3>
+<p>Functions to handle angles and waves. These implementations use Taylor Series approximations.</p>
+<ul>
+<li><code>Math.sin(x)</code>: Sine of <code>x</code> (in radians).</li>
+<li><code>Math.cos(x)</code>: Cosine of <code>x</code> (in radians).</li>
+<li><code>Math.tan(x)</code>: Tangent of <code>x</code> (in radians).</li>
+</ul>
+<h3 id="conversions"><a class="header" href="#conversions">Conversions</a></h3>
+<ul>
+<li><code>Math.to_radians(deg)</code>: Converts degrees to radians.</li>
+<li><code>Math.to_degrees(rad)</code>: Converts radians to degrees.</li>
+</ul>
+<pre><code>var angle = Math.to_radians(90)
+print Math.sin(angle) // ~1.0
+</code></pre>
+<hr>
+<h2 id="random-module"><a class="header" href="#random-module">Random Module</a></h2>
+<p>The Random module provides utilities for generating random numbers and selecting items from collections.</p>
+<p><strong>Import:</strong> <code>import "stdlib/random.aeg"</code></p>
+<h3 id="number-generation"><a class="header" href="#number-generation">Number Generation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Random.int(min, max)</code></td><td style="text-align: left">Returns a random integer where <code>min</code> is inclusive and <code>max</code> is <strong>exclusive</strong>.</td></tr>
+<tr><td style="text-align: left"><code>Random.float()</code></td><td style="text-align: left">Returns a random floating-point number between <code>0.0</code> and <code>1.0</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="collections-1"><a class="header" href="#collections-1">Collections</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Function</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>Random.choice(list)</code></td><td style="text-align: left">Returns a random element from the provided <code>list</code>. Returns <code>null</code> if the list is empty.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-3"><a class="header" href="#example-3">Example</a></h3>
+<pre><code class="language-aegis">import "stdlib/random.aeg"
+
+// 1. Roll a die (1 to 6)
+var dice = Random.int(1, 7)
+print "Dice roll: " + dice
+
+// 2. Random probability
+if (Random.float() &lt; 0.5) {
+    print "Heads!"
+} else {
+    print "Tails!"
+}
+
+// 3. Pick a winner
+var players = ["Alice", "Bob", "Charlie"]
+var winner = Random.choice(players)
+print "The winner is: " + winner
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="testing-framework"><a class="header" href="#testing-framework">Testing Framework</a></h1>
+<p>Aegis includes a lightweight unit testing framework to help you write reliable code.</p>
+<p>Import: <code>import "stdlib/test.aeg"</code></p>
+<h2 id="writing-tests"><a class="header" href="#writing-tests">Writing Tests</a></h2>
+<p>Use <code>Test.run</code> to define a test case. It creates a protected scope where errors are caught.</p>
+<pre><code class="language-javascript">Test.run("Calculations", func() {
+    var sum = 10 + 20
+    Assert.eq(sum, 30, "Sum should be 30")
+})
+</code></pre>
+<h2 id="assertions"><a class="header" href="#assertions">Assertions</a></h2>
+<p>The <code>Assert</code> namespace provides methods to validate conditions. If an assertion fails, the test stops and is marked as failed.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Assert.eq(a, b, msg)</code></td><td>Fails if <code>a != b</code>. Prints <code>msg</code> on failure.</td></tr>
+<tr><td><code>Assert.is_true(cond, msg)</code></td><td>Fails if the condition is false.</td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Note: We use <code>is_true</code> instead of <code>true</code> to avoid conflict with the boolean keyword.</em></p>
+<p>Example Output</p>
+<pre><code>TEST: Calculations...
+  ✅ PASS
+TEST: Bad Math...
+  ❌ FAIL: Assertion Failed: 10 != 5 (Math is broken)
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="advanced-topics"><a class="header" href="#advanced-topics">Advanced Topics</a></h1>
+<p>This section is for developers who want to understand how Aegis works “under the hood” or who wish to extend the language capabilities using Rust.</p>
+<p>We will dive into:</p>
+<ol>
+<li><strong>Architecture</strong>: The difference between the v0.1 Tree-Walk Interpreter and the current v0.2 Bytecode Virtual Machine.</li>
+<li><strong>Native Extensions</strong>: How to write high-performance plugins in Rust (<code>.dll</code> / <code>.so</code>) and load them into your Aegis scripts.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="aegis-architecture-vm-vs-tree-walk"><a class="header" href="#aegis-architecture-vm-vs-tree-walk">Aegis Architecture (VM vs Tree-Walk)</a></h1>
+<p>Aegis v0.2 marks a paradigm shift from a Tree-Walk Interpreter to a <strong>Bytecode Virtual Machine</strong>. This architecture is designed for speed, cache locality, and portability.</p>
+<p>[Image of Aegis compiler pipeline source to bytecode]</p>
+<h2 id="the-pipeline"><a class="header" href="#the-pipeline">The Pipeline</a></h2>
+<p>When you run a script (<code>aegis run script.aeg</code>), the following steps occur:</p>
+<ol>
+<li><strong>Lexing (Scanner)</strong>: The source code string is broken down into a stream of <strong>Tokens</strong> (Keywords, Identifiers, Literals).</li>
+<li><strong>Parsing</strong>: The tokens are analyzed to build an <strong>Abstract Syntax Tree (AST)</strong>. This represents the logical structure of the code.</li>
+<li><strong>Compilation</strong>: The AST is traversed once to generate a flat <strong>Chunk</strong> of Bytecode. Control flow (if/while) is converted into Jump instructions.</li>
+<li><strong>Execution (VM)</strong>: The Virtual Machine executes the Bytecode linearly using a central <strong>Stack</strong>.</li>
+</ol>
+<h2 id="stack-based-virtual-machine"><a class="header" href="#stack-based-virtual-machine">Stack-Based Virtual Machine</a></h2>
+<p>Aegis uses a Stack-Based architecture (similar to Java JVM or Python). There are no registers. Instructions push values onto the stack or pop them off to perform operations.</p>
+<p><strong>Example: <code>10 + 20</code></strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Instruction</th><th style="text-align: left">Stack State</th><th style="text-align: left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>LOAD_CONST 10</code></td><td style="text-align: left"><code>[10]</code></td><td style="text-align: left">Pushes 10 onto the stack.</td></tr>
+<tr><td style="text-align: left"><code>LOAD_CONST 20</code></td><td style="text-align: left"><code>[10, 20]</code></td><td style="text-align: left">Pushes 20 onto the stack.</td></tr>
+<tr><td style="text-align: left"><code>ADD</code></td><td style="text-align: left"><code>[30]</code></td><td style="text-align: left">Pops 20 and 10, adds them, pushes 30.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="memory-model"><a class="header" href="#memory-model">Memory Model</a></h3>
+<ul>
+<li><strong>Values</strong>: Aegis uses a compact <code>Value</code> enum (~24 bytes). Heavy objects (Functions, Classes, Lists) are stored on the Heap using Reference Counting (<code>Rc&lt;RefCell&gt;</code>), allowing for cheap copies and automatic memory management.</li>
+<li><strong>Call Frames</strong>: When a function is called, a new Frame is pushed. It tracks the function’s instruction pointer and the offset for its local variables on the global stack.</li>
+</ul>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<p>The transition to v0.2 resulted in a massive performance boost (approx. <strong>12x faster</strong> on heavy recursion).</p>
+<ul>
+<li><strong>CPU Cache Friendly</strong>: Instructions are stored in a contiguous <code>Vec&lt;u8&gt;</code>, reducing cache misses compared to traversing a pointer-heavy tree.</li>
+<li><strong>Fast-Path Optimization</strong>: Common operations (like Integer addition) are optimized to occur in-place on the stack without memory allocation.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="writing-native-extensions"><a class="header" href="#writing-native-extensions">Writing Native Extensions</a></h1>
+<p>Aegis is designed to be extensible. You can write high-performance modules in <strong>Rust</strong> and load them dynamically into your Aegis scripts.</p>
+<h2 id="prerequisites-1"><a class="header" href="#prerequisites-1">Prerequisites</a></h2>
+<p>You need Rust installed. Create a new library project:</p>
+<pre><code class="language-bash">cargo new --lib my_plugin
+</code></pre>
+<p>Update your Cargo.toml to produce a dynamic library:</p>
+<pre><code class="language-Ini TOML">[package]
+name = "my_aegis_package"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "package"
+path = "scripts/build_package.rs"
+
+[dependencies]
+# You must link against the core aegis library definition
+aegis_core = { path = "../path/to/aegis_core" } 
+</code></pre>
+<h2 id="the-build-script"><a class="header" href="#the-build-script">The Build Script</a></h2>
+<p>Create the file <code>scripts/build_package.rs</code> and paste the following code into it. You will need this to compile your package.</p>
+<pre class="playground"><code class="language-rust">use std::env;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
+
+fn main() {
+    // 1. Récupération DYNAMIQUE du nom du projet
+    let crate_name = env!("CARGO_PKG_NAME");
+    
+    println!("📦 Packaging du projet : [{}]", crate_name);
+
+    // 2. Détection de l'OS pour l'extension
+    let (lib_prefix, lib_ext) = if cfg!(target_os = "windows") {
+        ("", "dll")
+    } else if cfg!(target_os = "macos") {
+        ("lib", "dylib")
+    } else {
+        ("lib", "so") // Linux
+    };
+
+    let lib_filename = format!("{}{}.{}", lib_prefix, crate_name, lib_ext);
+
+    // 3. Lancer la compilation
+    println!("⚙️  Compilation en cours (Release)...");
+    
+    let status = Command::new("cargo")
+        .args(&amp;["build", "--release", "--lib"])
+        .status()
+        .expect("Impossible de lancer cargo");
+
+    if !status.success() {
+        eprintln!("❌ Erreur lors de la compilation Rust.");
+        std::process::exit(1);
+    }
+
+    // 4. Préparation des dossiers (CHANGEMENTS ICI)
+    let root_dir = env::current_dir().unwrap();
+    let dist_root = root_dir.join("dist");
+    
+    // On crée le chemin : dist/&lt;nom_du_paquet&gt;/
+    let package_out_dir = dist_root.join(crate_name);
+
+    println!("📂 Dossier de sortie : {:?}", package_out_dir);
+
+    // Nettoyage de la version précédente de CE paquet uniquement
+    if package_out_dir.exists() {
+        fs::remove_dir_all(&amp;package_out_dir).unwrap();
+    }
+    // Création de l'arborescence complète
+    fs::create_dir_all(&amp;package_out_dir).unwrap();
+
+    // 5. Copie du binaire (.dll / .so)
+    let target_dir = root_dir.join("target/release");
+    let src_lib_path = target_dir.join(&amp;lib_filename);
+    
+    // Destination dans le sous-dossier
+    let dest_lib_path = package_out_dir.join(&amp;lib_filename);
+
+    println!("📄 Copie du binaire : {}", lib_filename);
+    if src_lib_path.exists() {
+        fs::copy(&amp;src_lib_path, &amp;dest_lib_path)
+            .unwrap_or_else(|e| panic!("Erreur copie DLL : {}", e));
+    } else {
+        eprintln!("❌ Fichier introuvable : {:?}", src_lib_path);
+        eprintln!("   Vérifiez le 'name' dans Cargo.toml");
+        std::process::exit(1);
+    }
+
+    // 6. Copie des scripts Aegis (contenu de /packages)
+    let packages_dir = root_dir.join("packages");
+    if packages_dir.exists() {
+        println!("📂 Copie des scripts Aegis...");
+        // On copie VERS le sous-dossier spécifique
+        copy_dir_recursive(&amp;packages_dir, &amp;package_out_dir).expect("Erreur copie packages");
+    } else {
+        println!("⚠️  Aucun dossier 'packages/' trouvé (seul le binaire sera distribué).");
+    }
+
+    // 7. Génération du manifeste aegis.toml pour le paquet
+    println!("📝 Génération du manifeste de paquet...");
+    
+    // Noms théoriques des fichiers pour les autres OS
+    let lib_name_linux = format!("lib{}.so", crate_name);
+    let lib_name_windows = format!("{}.dll", crate_name);
+    let lib_name_macos = format!("lib{}.dylib", crate_name);
+
+    let toml_content = format!(r#"[package]
+name = "{}"
+version = "0.1.0"
+
+[targets]
+linux = "{}"
+windows = "{}"
+macos = "{}"
+"#, crate_name, lib_name_linux, lib_name_windows, lib_name_macos);
+
+    let manifest_path = package_out_dir.join("aegis.toml");
+    fs::write(&amp;manifest_path, toml_content).expect("Impossible de créer le manifeste");
+
+    println!("\n✅ SUCCÈS ! Votre package est prêt dans : dist/{}/", crate_name);
+}
+
+// Fonction utilitaire inchangée
+fn copy_dir_recursive(src: &amp;Path, dst: &amp;Path) -&gt; std::io::Result&lt;()&gt; {
+    if !dst.exists() {
+        fs::create_dir_all(dst)?;
+    }
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if ty.is_dir() {
+            copy_dir_recursive(&amp;src_path, &amp;dst_path)?;
+        } else {
+            fs::copy(&amp;src_path, &amp;dst_path)?;
+        }
+    }
+    Ok(())
+}</code></pre>
+<h2 id="the-entry-point"><a class="header" href="#the-entry-point">The Entry Point</a></h2>
+<p>Aegis looks for a specific symbol <code>_aegis_register</code> to load your functions.</p>
+<p><code>src/lib.rs</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use aegis_core::{Value, NativeFn};
+use std::collections::HashMap;
+
+// This function is called by the VM when loading the plugin
+#[no_mangle]
+pub extern "C" fn _aegis_register(map: &amp;mut HashMap&lt;String, NativeFn&gt;) {
+    // Map an Aegis function name to a Rust function
+    map.insert("my_hello".to_string(), hello_world);
+    map.insert("my_add".to_string(), add_numbers);
+}
+
+// 1. A simple function
+fn hello_world(_args: Vec&lt;Value&gt;) -&gt; Result&lt;Value, String&gt; {
+    println!("Hello from Rust!");
+    Ok(Value::Null)
+}
+
+// 2. Handling arguments
+fn add_numbers(args: Vec&lt;Value&gt;) -&gt; Result&lt;Value, String&gt; {
+    if args.len() != 2 {
+        return Err("Expected 2 arguments".into());
+    }
+
+    // Use helper methods to safely cast values
+    let a = args[0].as_int()?;
+    let b = args[1].as_int()?;
+
+    Ok(Value::Integer(a + b))
+}
+<span class="boring">}</span></code></pre>
+<h2 id="aegis-library-file"><a class="header" href="#aegis-library-file">Aegis Library File</a></h2>
+<p>Create a <code>packages/my_plugin.aeg</code> file to make it easy to use:</p>
+<pre><code class="language-aegis">// Wrap in a Namespace
+namespace MyPlugin {
+    func hello() {
+        return my_hello()
+    }
+    
+    func add(a, b) {
+        return my_add(a, b)
+    }
+}
+</code></pre>
+<h2 id="compiling"><a class="header" href="#compiling">Compiling</a></h2>
+<p>Build your plugin in release mode:</p>
+<pre><code class="language-bash">cargo run --bin package
+</code></pre>
+<p>This will generate a <code>dist/&lt;package_name&gt;/</code> folder which contains the ready-to-use Aegis package:</p>
+<ul>
+<li>Shared Library Files (<code>.dll</code> for Windows, <code>.so</code> for Linux and <code>.dylib</code> for MacOS)</li>
+<li>The Aegis files (<code>.aeg</code>) created in the <code>packages/</code> folder</li>
+<li>An <code>aegis.toml</code> manifest file automatically generated by the build script</li>
+</ul>
+<h2 id="usage-in-aegis"><a class="header" href="#usage-in-aegis">Usage in Aegis</a></h2>
+<pre><code class="language-aegis">import "packages/my_plugin.aeg"
+
+MyPlugin.hello() // Prints: Hello from Rust!
+var sum = MyPlugin.add(10, 20)
+print sum // 30
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="aegis-cookbook"><a class="header" href="#aegis-cookbook">Aegis Cookbook</a></h1>
+<p>Welcome to the Aegis Cookbook. This section contains a collection of practical <strong>recipes</strong> and code snippets for common programming tasks.</p>
+<p>Unlike the API Reference (StdLib), which explains <em>what</em> a function does, the Cookbook explains <em>how</em> to combine functions to achieve a specific goal.</p>
+<h2 id="recipes"><a class="header" href="#recipes">Recipes</a></h2>
+<ul>
+<li><a href="#file-processing-recipes"><strong>File Processing</strong></a>
+<ul>
+<li>Reading line-by-line</li>
+<li>Parsing CSV files</li>
+<li>Saving/Loading JSON configurations</li>
+</ul>
+</li>
+<li><a href="#networking-recipes"><strong>Networking</strong></a>
+<ul>
+<li>Fetching API data</li>
+<li>Posting JSON data</li>
+<li>Handling HTTP errors</li>
+</ul>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="file-processing-recipes"><a class="header" href="#file-processing-recipes">File Processing Recipes</a></h1>
+<p>This page covers common patterns for working with the file system.</p>
+<p><strong>Prerequisites:</strong></p>
+<pre><code class="language-aegis">import "stdlib/file.aeg"
+import "stdlib/path.aeg" // Optional, for path manipulation
+</code></pre>
+<h2 id="reading-a-file-line-by-line"><a class="header" href="#reading-a-file-line-by-line">Reading a File Line-by-Line</a></h2>
+<p>Since <code>File.read</code> loads the entire content into memory, you can use <code>split</code> to iterate over lines.</p>
+<pre><code class="language-aegis">var content = File.read("logs/server.log")
+var lines = content.split("\n")
+
+lines.for_each(func(line) {
+    // Skip empty lines
+    if (line.trim().len() &gt; 0) {
+        print "Processing: " + line
+    }
+})
+</code></pre>
+<h2 id="parsing-a-csv-string"><a class="header" href="#parsing-a-csv-string">Parsing a CSV String</a></h2>
+<p>Aegis handles string manipulation efficiently. Here is a helper function to turn CSV text into a List of Lists.</p>
+<pre><code class="language-aegis">func parse_csv(data) {
+    var rows = data.split("\n")
+    
+    // Use map to transform ["a,b", "c,d"] into [["a","b"], ["c","d"]]
+    return rows.map(func(row) {
+        return row.split(",")
+    })
+}
+
+// Example usage
+var csv_data = File.read("data.csv") 
+// Assume content is: name,age\nAlice,30\nBob,25
+
+var table = parse_csv(csv_data)
+
+// Accessing Bob's age (Row 2, Column 1)
+// Note: Row 0 is the header
+print "Age of Bob: " + table.at(2).at(1)
+</code></pre>
+<h2 id="saving-and-loading-configuration-json"><a class="header" href="#saving-and-loading-configuration-json">Saving and Loading Configuration (JSON)</a></h2>
+<p>Combining the <code>File</code> module with the <code>Json</code> module is perfect for managing application settings.</p>
+<pre><code class="language-aegis">import "stdlib/json.aeg"
+
+var config_path = "settings.json"
+
+// 1. Create default config
+var config = {
+    theme: "dark",
+    volume: 80,
+    username: "Guest"
+}
+
+// 2. Save to disk
+File.write(config_path, Json.stringify(config))
+print "Configuration saved."
+
+// 3. Load back
+if (File.exists(config_path)) {
+    var loaded_raw = File.read(config_path)
+    var loaded_config = Json.parse(loaded_raw)
+    
+    print "Welcome back, " + loaded_config.get("username")
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="networking-recipes"><a class="header" href="#networking-recipes">Networking Recipes</a></h1>
+<p>Aegis is excellent for writing “glue code” that connects different web services. These recipes use the <code>Http</code> module.</p>
+<p><strong>Prerequisites:</strong></p>
+<pre><code class="language-aegis">import "stdlib/http.aeg"
+import "stdlib/json.aeg"
+</code></pre>
+<h2 id="fetching-json-data-get"><a class="header" href="#fetching-json-data-get">Fetching JSON Data (GET)</a></h2>
+<p>This is the most common task: getting data from a REST API.</p>
+<pre><code class="language-aegis">var url = "https://jsonplaceholder.typicode.com/todos/1"
+
+try {
+    print "Fetching..."
+    var response = Http.get(url)
+    
+    // Convert string response to Dict
+    var todo = Json.parse(response)
+    
+    print "Task ID: " + todo.get("id")
+    print "Title:   " + todo.get("title")
+    print "Done:    " + todo.get("completed")
+    
+} catch (e) {
+    print "Request failed: " + e
+}
+</code></pre>
+<h2 id="sending-data-post"><a class="header" href="#sending-data-post">Sending Data (POST)</a></h2>
+<p>To send data to a server, you typically need to stringify your payload first.</p>
+<pre><code class="language-aegis">var url = "https://jsonplaceholder.typicode.com/posts"
+
+// 1. Prepare data
+var payload = {
+    title: "Aegis Language",
+    body: "Aegis is a cool new language.",
+    userId: 1
+}
+
+// 2. Send request
+try {
+    var json_payload = Json.stringify(payload)
+    var response = Http.post(url, json_payload)
+    
+    print "Server responded: " + response
+} catch (e) {
+    print "Post failed: " + e
+}
+</code></pre>
+<h2 id="simple-health-check-monitor"><a class="header" href="#simple-health-check-monitor">Simple Health Check Monitor</a></h2>
+<p>A script to check if a website is up.</p>
+<pre><code class="language-aegis">func check_status(site) {
+    try {
+        var res = Http.get(site)
+        // If Http.get returns without throwing, the site is reachable
+        print "[OK] " + site
+        return true
+    } catch (e) {
+        print "[DOWN] " + site + " (" + e + ")"
+        return false
+    }
+}
+
+var sites = [
+    "https://google.com",
+    "https://github.com",
+    "https://invalid-url-example.com"
+]
+
+print "--- Starting Health Check ---"
+sites.for_each(func(url) {
+    check_status(url)
+})
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="system-automation-recipes"><a class="header" href="#system-automation-recipes">System Automation Recipes</a></h1>
+<p>Aegis is great for replacing complex Bash scripts or Python glue code.</p>
+<p><strong>Prerequisites:</strong></p>
+<pre><code class="language-aegis">import "stdlib/system.aeg"
+import "stdlib/file.aeg"
+import "stdlib/date.aeg"
+import "stdlib/path.aeg"
+</code></pre>
+<h2 id="daily-backup-script"><a class="header" href="#daily-backup-script">Daily Backup Script</a></h2>
+<p>This script copies a file and appends the current date to its name.</p>
+<pre><code class="language-aegis">var source = "database.db"
+var timestamp = Date.format("%Y-%m-%d") // e.g., 2023-10-25
+var dest = "backups/database_" + timestamp + ".db"
+
+if (File.exists(source)) {
+    print "backing up " + source + " to " + dest + "..."
+    
+    // Read source
+    var content = File.read(source)
+    
+    // Ensure directory exists (basic check)
+    // Ideally, use Process.run("mkdir -p backups")
+    
+    // Write backup
+    File.write(dest, content)
+    print "✅ Backup complete."
+} else {
+    print "❌ Source file not found!"
+}
+</code></pre>
+<h2 id="environment-checker"><a class="header" href="#environment-checker">Environment Checker</a></h2>
+<p>Check if required environment variables are set before starting an app.</p>
+<pre><code class="language-aegis">var required_vars = ["API_KEY", "DB_HOST", "PORT"]
+var missing = 0
+
+required_vars.for_each(func(key) {
+    var val = System.env(key)
+    if (val == null) {
+        print "❌ Missing ENV: " + key
+        missing = missing + 1
+    } else {
+        print "✅ " + key + " is set."
+    }
+})
+
+if (missing &gt; 0) {
+    System.fail("Environment is not configured correctly.")
+}
+
+print "Starting Application..."
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="aegis-highlight-96eb0444.js"></script>
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
