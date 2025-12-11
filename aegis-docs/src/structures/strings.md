@@ -24,6 +24,7 @@ print first + " " + second // "Hello World"
 | `.ends_with(sub)` | Returns `true` if the string ends with the substring. |
 | `.replace(old, new)` | Replaces all occurrences of a substring. |
 | `.split(delimiter)` | Splits the string into a List of substrings. |
+| `.is_empty()` | Returns true if the string is empty, otherwise returns false. |
 
 ### Examples
 Cleaning Input

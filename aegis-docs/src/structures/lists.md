@@ -41,6 +41,10 @@ You can add and remove elements dynamically.
 | `.reverse()` | Reverses elements **in-place** and returns the list itself. | `list.reverse().at(0)` |
 | `.contains(val)` | Returns `true` if the value exists in the list. | `if (list.contains("admin")) { ... }` |
 | `.join(sep)` | Joins all elements into a single string using a separator. | `list.join(", ")` |
+| `.is_empty()` | Returns true if the list is empty, otherwise returns false. | `if (list.is_empty()) { ... }` |
+| `.first()` | Returns the first element of the list. | `var first = list.first()` |
+| `.last()` | Returns the last element of the list. | `var last = list.last()` |
+| `.clear()` | Remove all items from the list. | `list.clear()` |
 
 ### Example
 ```

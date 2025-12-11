@@ -1020,6 +1020,17 @@ impl VM {
                     
                     Value::String(strings.join(&sep))
                 },
+
+                "is_empty" => Value::Boolean(l.borrow().is_empty()),
+
+                "first" => l.borrow().first().cloned().unwrap_or(Value::Null),
+
+                "last" => l.borrow().last().cloned().unwrap_or(Value::Null),
+
+                "clear" => {
+                    l.borrow_mut().clear();
+                    Value::Null
+                },
                 
                 // --- FUNCTIONAL PROGRAMMING ---
                 
@@ -1081,6 +1092,7 @@ impl VM {
                      let key = args[0].as_str().unwrap_or("?".to_string());
                      d.borrow().get(&key).cloned().unwrap_or(Value::Null)
                 },
+                "is_empty" => Value::Boolean(d.borrow().is_empty()),
                 _ => return Err(format!("Unknown dict method '{}'", method_name).into())
             },
 
@@ -1135,6 +1147,8 @@ impl VM {
                     // On retourne une Value::List
                     Value::List(Rc::new(RefCell::new(parts)))
                 },
+
+                "is_empty" => Value::Boolean(s.is_empty()),
 
                 _ => return Err(format!("Méthode string inconnue '{}'", method_name).into())
             },

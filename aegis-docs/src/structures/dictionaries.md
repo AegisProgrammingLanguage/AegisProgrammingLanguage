@@ -18,10 +18,11 @@ var config = {
 
 | Method | Description | Example |
 |--- |--- |--- |
-| .get(key) | Returns the value associated with the key. | dict.get("host") |
-| .insert(key, val) | Adds or updates a key-value pair. | dict.insert("ssl", true) |
-| .keys() | Returns a List of all keys in the dictionary. | dict.keys() |
-| .len() | Returns the number of entries. | dict.len() |
+| `.get(key)` | Returns the value associated with the key. | `dict.get("host")` |
+| `.insert(key, val)` | Adds or updates a key-value pair. | `dict.insert("ssl", true)` |
+| `.keys()` | Returns a List of all keys in the dictionary. | `dict.keys()` |
+| `.len()` | Returns the number of entries. | `dict.len()` |
+| `.is_empty()` | Returns true if the dict is empty, otherwise returns false. | `if (dict.is_empty()) { ... }` |
 
 ### Example
 
