@@ -95,6 +95,7 @@ impl Parser {
             TokenKind::Throw => self.parse_throw(),
             TokenKind::Switch => self.parse_switch(),
             TokenKind::Namespace => self.parse_namespace(),
+            TokenKind::Const => self.parse_const(),
             
             TokenKind::Identifier(_) | TokenKind::Super => {
                 let line = self.current_line();
@@ -345,6 +346,28 @@ impl Parser {
         let name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Ns Name".into()); };
         let body = self.parse_block()?;
         Ok(json!(["namespace", line, name, body]))
+    }
+
+    fn parse_const(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
+        self.advance(); // Eat 'const'
+        
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { 
+            n.clone() 
+        } else { 
+            return Err("Expect constant name".into()); 
+        };
+
+        // Typage graduel optionnel (const PI: float = ...)
+        // On consomme le type mais on l'ignore pour l'instant (ou on l'utilise pour check)
+        let _type_annot = self.parse_type_annotation()?; 
+
+        self.consume(TokenKind::Eq, "Expect '=' after constant name")?;
+        
+        let expr = self.parse_expression()?;
+        
+        // JSON: ["const", line, name, expr]
+        Ok(json!(["const", line, name, expr]))
     }
 
     fn parse_decorated_function(&mut self) -> Result<Value, String> {

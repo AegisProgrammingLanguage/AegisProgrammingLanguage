@@ -1,10 +1,12 @@
 # Variables &amp; Data Types
 
-Aegis is a **dynamically typed** language. This means you do not need to specify the type of a variable when you declare it, and a variable can hold values of different types throughout its life (unless you use Gradual Typing, see the next chapter).
+Aegis allows you to store data using mutable variables or immutable constants.
 
-## Declaration
+It is a **dynamically typed** language by default. This means you do not need to specify the type of a variable when you declare it, and a variable can hold values of different types throughout its life (unless you use Gradual Typing).
 
-To declare a variable, use the `var` keyword:
+## Mutable Variable
+
+Use the `var` keyword when the value needs to change during the execution of the program.
 
 ```aegis
 var username = "Admin"
@@ -23,6 +25,31 @@ print data // 42
 data = "Changed to string"
 print data // Changed to string
 ```
+
+## Immutable Constants (const)
+
+Use `const` for values that must remain the same throughout the entire scope (e.g., configuration, math constants). This provides safety and clarifies intent.
+
+```aegis
+const PI = 3.14159
+const MAX_RETRIES = 5
+
+// Using the value works fine
+var area = PI * 10 * 10
+```
+
+### Safety Check
+
+Constants are protected at **Compile Time**. If you try to reassign a constant, Aegis will raise an error and refuse to run the script.
+
+```aegis
+const URL = "https://google.com"
+
+// This causes a panic/crash at compile time:
+URL = "https://bing.com" 
+```
+
+*Tip: It is considered good practice to name constants using UPPER_SNAKE_CASE (e.g., MAX_SPEED), although Aegis does not enforce it.*
 
 ## Primitive Types
 

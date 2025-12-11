@@ -1,0 +1,16 @@
+print "--- TEST CONST ---"
+
+const PI = 3.14
+print "PI = " + PI
+
+// Ceci doit marcher (Var)
+var x = 10
+x = 11
+print "Var x modifiee : " + x
+
+// Ceci doit planter A LA COMPILATION (Panic Rust)
+try {
+    PI = 3.14159
+} catch (e) {
+    print "Erreur runtime ? Non, ca doit planter avant."
+}

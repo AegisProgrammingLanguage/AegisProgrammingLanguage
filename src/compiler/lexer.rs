@@ -25,7 +25,8 @@ pub enum TokenKind {
     At,
     Arrow,
     Super,
-    Question
+    Question,
+    Const
 }
 
 #[derive(Debug, Clone)]
@@ -355,6 +356,7 @@ impl<'a> Lexer<'a> {
             "continue" => TokenKind::Continue,
             "super" => TokenKind::Super,
             "enum" => TokenKind::Enum,
+            "const" => TokenKind::Const,
             _ => TokenKind::Identifier(s),
         };
 

@@ -326,6 +326,12 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
         "break" => Ok(Instruction::ExpressionStatement(Expression::Literal(Value::Null))),
 
         "continue" => Ok(Instruction::Continue),
+
+        "const" => {
+            let name = array[2].as_str().unwrap().to_string();
+            let expr = parse_expression(&array[3])?;
+            Ok(Instruction::Const(name, expr))
+        },
         
         _ => Err(format!("Instruction inconnue: {}", command)),
     }?;

@@ -102,7 +102,8 @@ pub enum Instruction {
         body: Vec<Statement>
     },
     Throw(Expression),
-    Continue
+    Continue,
+    Const(String, Expression)
 }
 
 #[derive(Debug, Clone, PartialEq)]

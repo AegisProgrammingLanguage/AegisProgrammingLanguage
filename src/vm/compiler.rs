@@ -13,10 +13,17 @@ pub enum LoopState {
     For { continue_patches: Vec<usize> }, // Liste des jumps à corriger
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct LocalInfo {
+    index: u8,
+    is_const: bool
+}
+
 pub struct Compiler {
     pub chunk: Chunk,
     pub globals: Rc<RefCell<HashMap<String, u8>>>, 
-    pub locals: HashMap<String, u8>,
+    pub locals: HashMap<String, LocalInfo>,
+    pub global_constants: Vec<String>,
     pub scope_depth: usize,
     pub current_return_type: Option<String>,
     pub current_line: usize,
@@ -41,6 +48,7 @@ impl Compiler {
             chunk: Chunk::new(),
             globals,
             locals: HashMap::new(),
+            global_constants: Vec::new(),
             scope_depth: 0,
             current_return_type: None,
             current_line: 1,
@@ -54,6 +62,7 @@ impl Compiler {
             chunk: Chunk::new(),
             globals, 
             locals: HashMap::new(),
+            global_constants: Vec::new(),
             scope_depth: 0,
             current_return_type: None,
             current_line: 1,
@@ -124,7 +133,8 @@ impl Compiler {
             },
             Expression::Variable(name) => {
                 // 1. On cherche d'abord dans les locales (si on est dans une fonction)
-                if let Some(&idx) = self.locals.get(&name) {
+                if let Some(info) = self.locals.get(&name) {
+                    let idx = info.index;
                     self.emit_op(OpCode::GetLocal);
                     self.emit_byte(idx);
                 } else {
@@ -358,7 +368,10 @@ impl Compiler {
                 func_compiler.scope_depth = 1;
 
                 for (i, (param_name, _)) in params.iter().enumerate() {
-                    func_compiler.locals.insert(param_name.clone(), i as u8);
+                    func_compiler.locals.insert(param_name.clone(), LocalInfo {
+                        index: i as u8,
+                        is_const: false
+                    });
                 }
                 for stmt in body {
                     func_compiler.compile_instruction(stmt.kind);
@@ -368,8 +381,8 @@ impl Compiler {
                 func_compiler.emit_byte(null_idx);
                 func_compiler.emit_op(OpCode::Return);
 
-                for (name, idx) in &func_compiler.locals {
-                    func_compiler.chunk.locals_map.insert(*idx, name.clone());
+                for (name, info) in &func_compiler.locals {
+                    func_compiler.chunk.locals_map.insert(info.index, name.clone());
                 }
 
                 let func_chunk = func_compiler.chunk;
@@ -407,6 +420,18 @@ impl Compiler {
                 self.emit_op(OpCode::Return);  // 2. Quitte la fonction
             },
             Instruction::Set(var_name, type_annot, expr) => {
+                // A. Check Locals
+                if let Some(info) = self.locals.get(&var_name) {
+                    if info.is_const {
+                        panic!("Erreur: Impossible de modifier la constante locale '{}'", var_name);
+                    }
+                }
+                
+                // B. Check Globals (Scope courant)
+                if self.global_constants.contains(&var_name) {
+                    panic!("Erreur: Impossible de modifier la constante globale '{}'", var_name);
+                }
+
                 self.compile_expression(expr); // La valeur calculée est maintenant sur la pile [val]
 
                 if let Some(type_name) = type_annot {
@@ -416,7 +441,8 @@ impl Compiler {
                 }
 
                 // CAS 1 : C'est une variable locale DÉJÀ connue (Assignation : x = 5)
-                if let Some(&idx) = self.locals.get(&var_name) {
+                if let Some(info) = self.locals.get(&var_name) {
+                    let idx = info.index;
                     self.emit_op(OpCode::SetLocal);
                     self.emit_byte(idx);
                     self.emit_op(OpCode::Pop); // Nettoyage : On retire la valeur car c'est une instruction (statement)
@@ -424,7 +450,10 @@ impl Compiler {
                 // CAS 2 : On est dans une fonction, c'est une NOUVELLE variable (Déclaration : var res = ...)
                 else if self.scope_depth > 0 {
                     let idx = self.locals.len() as u8; // Le prochain slot libre sur la pile
-                    self.locals.insert(var_name.clone(), idx);
+                    self.locals.insert(var_name.clone(), LocalInfo {
+                        index: idx,
+                        is_const: false
+                    });
                     
                     // ASTUCE MAGIQUE DE LA PILE :
                     // On ne fait RIEN d'autre. La valeur [val] est déjà au sommet de la pile.
@@ -454,7 +483,10 @@ impl Compiler {
                 func_compiler.scope_depth = 1;
 
                 for (i, (param_name, param_type)) in params.iter().enumerate() {
-                    func_compiler.locals.insert(param_name.clone(), i as u8);
+                    func_compiler.locals.insert(param_name.clone(), LocalInfo {
+                        index: i as u8,
+                        is_const: false
+                    });
 
                     if let Some(t) = param_type {
                         // Au début de la fonction, les arguments sont déjà sur la pile (locales).
@@ -483,8 +515,8 @@ impl Compiler {
                 func_compiler.emit_byte(null_idx);
                 func_compiler.emit_op(OpCode::Return);
 
-                for (name, idx) in &func_compiler.locals {
-                    func_compiler.chunk.locals_map.insert(*idx, name.clone());
+                for (name, info) in &func_compiler.locals {
+                    func_compiler.chunk.locals_map.insert(info.index, name.clone());
                 }
 
                 let func_chunk = func_compiler.chunk;
@@ -507,7 +539,10 @@ impl Compiler {
                 if self.scope_depth > 0 {
                     // Cas Namespace ou Fonction imbriquée : C'est une locale
                     let idx = self.locals.len() as u8;
-                    self.locals.insert(name.clone(), idx);
+                    self.locals.insert(name.clone(), LocalInfo {
+                        index: idx,
+                        is_const: false
+                    });
                     // La fonction est déjà sur la pile, elle devient la variable locale 'name'.
                     // On ne fait rien d'autre (comme pour SetLocal implicite).
                 } else {
@@ -529,7 +564,10 @@ impl Compiler {
                     // ATTENTION : On utilise locals.len() AVANT d'insérer, ce qui correspond
                     // à l'index de la valeur qu'on vient de pousser (car len a augmenté implicitement via la stack).
                     let idx = self.locals.len() as u8;
-                    self.locals.insert(var_name.clone(), idx);
+                    self.locals.insert(var_name.clone(), LocalInfo {
+                        index: idx,
+                        is_const: false
+                    });
                     idx
                 } else {
                     let idx = self.resolve_global(&var_name);
@@ -658,7 +696,10 @@ impl Compiler {
                     actual_params.extend(m_params.clone());
 
                     for (i, (param_name, _)) in actual_params.iter().enumerate() {
-                        method_compiler.locals.insert(param_name.clone(), i as u8);
+                        method_compiler.locals.insert(param_name.clone(), LocalInfo {
+                            index: i as u8,
+                            is_const: false
+                        });
                     }
                     for stmt in m_body {
                         method_compiler.compile_instruction(stmt.kind);
@@ -724,7 +765,10 @@ impl Compiler {
                 
                 // On déclare que la variable 'e' existe et qu'elle est située au sommet actuel de la pile.
                 let catch_var_idx = self.locals.len() as u8;
-                self.locals.insert(error_var.clone(), catch_var_idx);
+                self.locals.insert(error_var.clone(), LocalInfo {
+                    index: catch_var_idx,
+                    is_const: true
+                });
                 
                 // --- MODIFICATION ICI ---
                 // On ne fait NI SetLocal, NI Pop. 
@@ -764,7 +808,10 @@ impl Compiler {
                     let idx = self.locals.len() as u8;
                     // On "réserve" le slot local. Attention: la valeur n'y est pas encore !
                     // Mais cela permet à 'resolve_local' de savoir que la variable existe.
-                    self.locals.insert(name.clone(), idx);
+                    self.locals.insert(name.clone(), LocalInfo {
+                        index: idx,
+                        is_const: false
+                    });
                     Some(idx)
                 } else {
                     None
@@ -780,7 +827,7 @@ impl Compiler {
 
                 // 3. CONSTRUCTION DU DICTIONNAIRE (Exports)
                 let exports: Vec<(String, u8)> = ns_compiler.locals.iter()
-                    .map(|(k, v)| (k.clone(), *v))
+                    .map(|(k, info)| (k.clone(), info.index))
                     .collect();
                 
                 let count = exports.len();
@@ -797,8 +844,8 @@ impl Compiler {
                 ns_compiler.emit_byte((count * 2) as u8);
                 ns_compiler.emit_op(OpCode::Return);
 
-                for (name, idx) in &ns_compiler.locals {
-                    ns_compiler.chunk.locals_map.insert(*idx, name.clone());
+                for (name, info) in &ns_compiler.locals {
+                    ns_compiler.chunk.locals_map.insert(info.index, name.clone());
                 }
 
                 // 4. EMBALLAGE (Closure)
@@ -894,7 +941,10 @@ impl Compiler {
                 // On le stocke dans la variable (Globale ou Locale selon le scope)
                 if self.scope_depth > 0 {
                     let idx = self.locals.len() as u8;
-                    self.locals.insert(name.clone(), idx);
+                    self.locals.insert(name.clone(), LocalInfo {
+                        index: idx,
+                        is_const: false
+                    });
                     self.emit_op(OpCode::SetLocal);
                     self.emit_byte(idx);
                 } else {
@@ -907,6 +957,27 @@ impl Compiler {
                 // Sinon, ajoute un Pop. (Dans ta v2, SetGlobal fait un pop implicite via l'assignation du tableau, non ?)
                 // Vérification VM v2 : OpCode::SetGlobal => let val = self.pop(); ...
                 // C'est bon, la pile est propre.
+            },
+            Instruction::Const(name, expr) => {
+                self.compile_expression(expr); // Valeur sur la pile
+                
+                if self.scope_depth > 0 {
+                    // --- LOCALE ---
+                    let idx = self.locals.len() as u8;
+                    self.locals.insert(name.clone(), LocalInfo { 
+                        index: idx, 
+                        is_const: true 
+                    });
+                    // La valeur est sur la pile, elle devient la variable.
+                } else {
+                    // --- GLOBALE ---
+                    let id = self.resolve_global(&name);
+                    self.emit_op(OpCode::SetGlobal);
+                    self.emit_byte(id);
+                    
+                    // On la marque comme constante pour empêcher la modif dans ce fichier
+                    self.global_constants.push(name);
+                }
             },
         }
     }
@@ -1021,7 +1092,7 @@ impl Compiler {
         
         // 2. On nettoie la table des symboles (Compile-time)
         // On retire toutes les variables qui ont un index >= initial_locals_count
-        self.locals.retain(|_, &mut idx| idx < initial_locals_count as u8);
+        self.locals.retain(|_, &mut info| info.index < initial_locals_count as u8);
     }
 
     // Tente de réduire une expression constante
