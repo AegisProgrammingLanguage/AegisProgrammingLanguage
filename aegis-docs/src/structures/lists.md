@@ -45,6 +45,8 @@ You can add and remove elements dynamically.
 | `.first()` | Returns the first element of the list. | `var first = list.first()` |
 | `.last()` | Returns the last element of the list. | `var last = list.last()` |
 | `.clear()` | Remove all items from the list. | `list.clear()` |
+| `.reduce(fn, init)` | Reduces the list to a single value using an accumulator. | `var sum = [1, 2, 3].reduce(func(acc, n) { return acc + n }, 0) // 6` |
+| `.slice(start, end)` | Returns a sub-list from start to end (exclusive). | `var page1 = items.slice(0, 10)` |
 
 ### Example
 ```

@@ -23,6 +23,8 @@ var config = {
 | `.keys()` | Returns a List of all keys in the dictionary. | `dict.keys()` |
 | `.len()` | Returns the number of entries. | `dict.len()` |
 | `.is_empty()` | Returns true if the dict is empty, otherwise returns false. | `if (dict.is_empty()) { ... }` |
+| `.remove(key)` | Removes a key and returns its value. | `dict.remove("ssl")` |
+| `.values()` | Returns a List of all values in the dictionary. | `dict.values() // [true]` (true is the value of key "ssl") |
 
 ### Example
 

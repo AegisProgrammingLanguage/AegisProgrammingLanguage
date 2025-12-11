@@ -1031,6 +1031,41 @@ impl VM {
                     l.borrow_mut().clear();
                     Value::Null
                 },
+
+                "reduce" => {
+                    // Usage: list.reduce(func(acc, val), initial_value)
+                    if args.len() < 2 { return Err("reduce expects (callback, initial)".into()); }
+                    
+                    let callback = args[0].clone();
+                    let mut accumulator = args[1].clone();
+                    let list_data = l.borrow().clone();
+
+                    for item in list_data {
+                        // Le callback prend (acc, item) et retourne le nouvel acc
+                        accumulator = self.run_callable_sync(callback.clone(), vec![accumulator, item])?;
+                    }
+                    
+                    accumulator
+                },
+
+                // --- Utility ---
+
+                "slice" => {
+                    // Usage: list.slice(start, end_exclusive)
+                    let len = l.borrow().len();
+                    let start = args.get(0).and_then(|v| v.as_int().ok()).unwrap_or(0) as usize;
+                    let end = args.get(1).and_then(|v| v.as_int().ok()).unwrap_or(len as i64) as usize;
+
+                    // Clamping pour éviter les crashs
+                    let start = start.min(len);
+                    let end = end.min(len).max(start);
+
+                    let list_borrow = l.borrow();
+                    // On crée une nouvelle liste avec la tranche
+                    let new_vec = list_borrow[start..end].to_vec();
+                    
+                    Value::List(Rc::new(RefCell::new(new_vec)))
+                },
                 
                 // --- FUNCTIONAL PROGRAMMING ---
                 
@@ -1092,7 +1127,20 @@ impl VM {
                      let key = args[0].as_str().unwrap_or("?".to_string());
                      d.borrow().get(&key).cloned().unwrap_or(Value::Null)
                 },
+
                 "is_empty" => Value::Boolean(d.borrow().is_empty()),
+                
+                "remove" => {
+                    let key = args[0].as_str().unwrap_or_default();
+                    // Retourne la valeur supprimée ou Null
+                    d.borrow_mut().remove(&key).unwrap_or(Value::Null)
+                },
+
+                "values" => {
+                    // Retourne une liste des valeurs
+                    let vals: Vec<Value> = d.borrow().values().cloned().collect();
+                    Value::List(Rc::new(RefCell::new(vals)))
+                },
                 _ => return Err(format!("Unknown dict method '{}'", method_name).into())
             },
 
