@@ -268,6 +268,17 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
                 methods 
             }))
         },
+
+        "enum" => {
+            let name = array[2].as_str().unwrap().to_string();
+            let variants_arr = array[3].as_array().unwrap();
+            
+            let variants: Vec<String> = variants_arr.iter()
+                .map(|v| v.as_str().unwrap().to_string())
+                .collect();
+                
+            Ok(Instruction::Enum(name, variants))
+        },
         
         "import" => Ok(Instruction::Import(array[2].as_str().unwrap().to_string())),
         

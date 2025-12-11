@@ -586,6 +586,11 @@ impl VM {
                         let val = d.borrow().get(&attr_name).cloned().unwrap_or(Value::Null);
                         self.push(val);
                     }
+                    Value::Enum(e) => {
+                        // Accès direct sans borrow() car pas de RefCell
+                        let val = e.get(&attr_name).cloned().unwrap_or(Value::Null);
+                        self.push(val);
+                    }
                     // On pourrait ajouter d'autres types (ex: Module)
                     _ => {
                         return Err(format!(
@@ -612,6 +617,9 @@ impl VM {
                         d.borrow_mut().insert(attr_name, val.clone());
                         self.push(val);
                     }
+                    Value::Enum(_) => {
+                        return Err("Cannot modify an Enum member (Enums are immutable)".into());
+                    },
                     _ => return Err("Impossible d'assigner un attribut sur ce type".into()),
                 }
             }
@@ -635,6 +643,23 @@ impl VM {
                 let idx = self.read_byte();
                 let class_val = self.current_frame().chunk().constants[idx as usize].clone();
                 self.push(class_val);
+            }
+
+            OpCode::MakeEnum => {
+                let count = self.read_byte() as usize; // Nombre total d'éléments sur la pile (clés + valeurs)
+                let num_pairs = count / 2;
+                let mut map = HashMap::new();
+
+                // On dépile dans l'ordre inverse
+                for _ in 0..num_pairs {
+                    let val = self.pop();
+                    let key_val = self.pop();
+                    let key = key_val.as_str().unwrap_or("?".to_string());
+                    map.insert(key, val);
+                }
+
+                // On crée un Value::Enum SANS RefCell
+                self.push(Value::Enum(Rc::new(map)));
             }
 
             OpCode::MakeClosure => {
@@ -1129,7 +1154,7 @@ impl VM {
                 },
 
                 "is_empty" => Value::Boolean(d.borrow().is_empty()),
-                
+
                 "remove" => {
                     let key = args[0].as_str().unwrap_or_default();
                     // Retourne la valeur supprimée ou Null

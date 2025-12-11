@@ -849,6 +849,40 @@ impl Compiler {
                     LoopAction::Error => panic!("'continue' utilisé hors d'une boucle."),
                 }
             },
+            Instruction::Enum(name, variants) => {
+                for (i, variant_name) in variants.iter().enumerate() {
+                    // Clé
+                    let key_idx = self.chunk.add_constant(Value::String(variant_name.clone()));
+                    self.emit_op(OpCode::LoadConst);
+                    self.emit_byte(key_idx);
+                    
+                    // Valeur (i)
+                    let val_idx = self.chunk.add_constant(Value::Integer(i as i64));
+                    self.emit_op(OpCode::LoadConst);
+                    self.emit_byte(val_idx);
+                }
+                
+                // On crée l'enum
+                self.emit_op(OpCode::MakeEnum);
+                self.emit_byte((variants.len() * 2) as u8);
+                
+                // On le stocke dans la variable (Globale ou Locale selon le scope)
+                if self.scope_depth > 0 {
+                    let idx = self.locals.len() as u8;
+                    self.locals.insert(name.clone(), idx);
+                    self.emit_op(OpCode::SetLocal);
+                    self.emit_byte(idx);
+                } else {
+                    let id = self.resolve_global(&name);
+                    self.emit_op(OpCode::SetGlobal);
+                    self.emit_byte(id);
+                }
+                // SetGlobal/SetLocal ne popent pas toujours selon ton implémentation.
+                // Si SetGlobal consomme la valeur (ce qui est le cas dans ta VM v2), c'est bon.
+                // Sinon, ajoute un Pop. (Dans ta v2, SetGlobal fait un pop implicite via l'assignation du tableau, non ?)
+                // Vérification VM v2 : OpCode::SetGlobal => let val = self.pop(); ...
+                // C'est bon, la pile est propre.
+            },
         }
     }
 

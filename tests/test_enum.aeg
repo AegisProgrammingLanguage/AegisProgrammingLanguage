@@ -1,0 +1,24 @@
+print "--- TEST ENUM SAFETY ---"
+
+enum Status {
+    Idle,
+    Running
+}
+
+print "Status.Idle = " + Status.Idle
+
+// 1. Tentative de lecture (Doit marcher)
+if (Status.Idle == 0) {
+    print "✅ Lecture OK"
+}
+
+// 2. Tentative d'écriture (Doit crasher)
+try {
+    print "Tentative de piratage..."
+    Status.Idle = 666
+} catch (e) {
+    print "🛡️ SECURITE ACTIVE : " + e
+}
+
+// 3. Vérification intégrité
+print "Status.Idle est toujours : " + Status.Idle

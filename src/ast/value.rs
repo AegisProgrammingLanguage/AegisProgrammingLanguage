@@ -34,6 +34,7 @@ pub enum Value {
     Boolean(bool),
     List(Rc<RefCell<Vec<Value>>>),
     Dict(Rc<RefCell<HashMap<String, Value>>>),
+    Enum(Rc<HashMap<String, Value>>),
     Function(Rc<FunctionData>), 
     Class(Rc<ClassData>),
     Instance(Rc<RefCell<InstanceData>>),
@@ -64,6 +65,9 @@ impl fmt::Display for Value {
                     write!(f, "{}: {}", k, v)?;
                 }
                 write!(f, "}}")
+            },
+            Value::Enum(e) => {
+                write!(f, "<Enum ({} variants)>", e.len())
             },
             Value::Function(rc_fn) => {
                  let p_str: Vec<String> = rc_fn.params.iter().map(|p| p.0.clone()).collect();

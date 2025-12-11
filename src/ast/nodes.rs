@@ -84,6 +84,7 @@ pub enum Instruction {
     Input(String, Expression),
     Class(ClassDefinition),
     SetAttr(Box<Expression>, String, Expression),
+    Enum(String, Vec<String>),
     Import(String),
     TryCatch {
         try_body: Vec<Statement>,

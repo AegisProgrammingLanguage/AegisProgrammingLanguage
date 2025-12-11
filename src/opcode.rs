@@ -35,6 +35,7 @@ pub enum OpCode {
     // Structures
     MakeList, // operand: u8 (count)
     MakeDict, // operand: u8 (count * 2)
+    MakeEnum,
 
     // OOP
     Class,    // operand: const_idx (nom)

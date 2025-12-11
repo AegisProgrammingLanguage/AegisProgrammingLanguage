@@ -82,6 +82,7 @@ impl Parser {
             TokenKind::For => self.parse_for(),
             TokenKind::Func => self.parse_func(),
             TokenKind::Class => self.parse_class(),
+            TokenKind::Enum => self.parse_enum(),
             TokenKind::Return => self.parse_return(),
             TokenKind::Input => self.parse_input(),
             TokenKind::Break => { 
@@ -464,6 +465,40 @@ impl Parser {
         } else {
             Ok(json!(["class", line, name, methods, parent]))
         }
+    }
+
+    fn parse_enum(&mut self) -> Result<Value, String> {
+        let line = self.current_line();
+        self.advance(); // Eat 'enum'
+        
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { 
+            n.clone() 
+        } else { 
+            return Err("Expect Enum Name".into()); 
+        };
+
+        self.consume(TokenKind::LBrace, "Expect '{'")?;
+        
+        let mut variants = Vec::new();
+        if !self.check(&TokenKind::RBrace) {
+            loop {
+                if let TokenKind::Identifier(v) = &self.advance().kind {
+                    variants.push(json!(v));
+                } else {
+                    return Err("Expect enum variant name".into());
+                }
+                
+                // Virgule optionnelle pour le dernier élément ?
+                if !self.match_token(TokenKind::Comma) { 
+                    break; 
+                }
+            }
+        }
+        
+        self.consume(TokenKind::RBrace, "Expect '}'")?;
+        
+        // JSON: ["enum", line, name, [variants...]]
+        Ok(json!(["enum", line, name, variants]))
     }
 
     fn parse_func(&mut self) -> Result<Value, String> {
