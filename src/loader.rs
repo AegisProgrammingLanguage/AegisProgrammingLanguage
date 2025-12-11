@@ -46,6 +46,18 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                 "&&" => Ok(Expression::And(Box::new(parse_expression(&array[1])?), Box::new(parse_expression(&array[2])?))),
                 "||" => Ok(Expression::Or(Box::new(parse_expression(&array[1])?), Box::new(parse_expression(&array[2])?))),
                 "!" => Ok(Expression::Not(Box::new(parse_expression(&array[1])?))),
+                "?" => {
+                    // ["?", cond, true, false]
+                    let cond = parse_expression(&array[1])?;
+                    let then_branch = parse_expression(&array[2])?;
+                    let else_branch = parse_expression(&array[3])?;
+                    
+                    Ok(Expression::Ternary(
+                        Box::new(cond),
+                        Box::new(then_branch),
+                        Box::new(else_branch)
+                    ))
+                },
                 
                 // --- Comparaison ---
                 "==" => Ok(Expression::Equal(Box::new(parse_expression(&array[1])?), Box::new(parse_expression(&array[2])?))),

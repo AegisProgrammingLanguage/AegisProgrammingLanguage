@@ -522,7 +522,24 @@ impl Parser {
     // --- Expression Parsing ---
 
     fn parse_expression(&mut self) -> Result<Value, String> {
-        self.parse_logical_or()
+        self.parse_ternary()
+    }
+
+    fn parse_ternary(&mut self) -> Result<Value, String> {
+        // On commence par parser le niveau inférieur (OR, AND...)
+        let mut expr = self.parse_logical_or()?;
+
+        // Si on rencontre '?', c'est un ternaire
+        if self.match_token(TokenKind::Question) {
+            let true_branch = self.parse_expression()?; // Récursif pour permettre l'imbrication
+            self.consume(TokenKind::Colon, "Expect ':' in ternary operator")?;
+            let false_branch = self.parse_ternary()?;   // Associativité à droite
+
+            // Format JSON : ["?", condition, true_expr, false_expr]
+            expr = json!(["?", expr, true_branch, false_branch]);
+        }
+
+        Ok(expr)
     }
 
     fn parse_logical_or(&mut self) -> Result<Value, String> {

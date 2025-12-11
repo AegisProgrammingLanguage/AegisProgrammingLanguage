@@ -123,22 +123,22 @@ impl Compiler {
                 self.emit_op(OpCode::Div);
             },
             Expression::Variable(name) => {
-                    // 1. On cherche d'abord dans les locales (si on est dans une fonction)
-                    if let Some(&idx) = self.locals.get(&name) {
-                        self.emit_op(OpCode::GetLocal);
-                        self.emit_byte(idx);
+                // 1. On cherche d'abord dans les locales (si on est dans une fonction)
+                if let Some(&idx) = self.locals.get(&name) {
+                    self.emit_op(OpCode::GetLocal);
+                    self.emit_byte(idx);
+                } else {
+                    if self.scope_depth > 0 {
+                        let name_idx = self.chunk.add_constant(Value::String(name.clone()));
+                        self.emit_op(OpCode::GetFreeVar);
+                        self.emit_byte(name_idx);
                     } else {
-                        if self.scope_depth > 0 {
-                            let name_idx = self.chunk.add_constant(Value::String(name.clone()));
-                            self.emit_op(OpCode::GetFreeVar);
-                            self.emit_byte(name_idx);
-                        } else {
-                            let id = self.resolve_global(&name);
-                            self.emit_op(OpCode::GetGlobal);
-                            self.emit_byte(id);
-                        }
+                        let id = self.resolve_global(&name);
+                        self.emit_op(OpCode::GetGlobal);
+                        self.emit_byte(id);
                     }
-                },
+                }
+            },
             Expression::LessThan(left, right) => {
                 self.compile_expression(*left);
                 self.compile_expression(*right);
@@ -241,6 +241,31 @@ impl Compiler {
                 self.patch_jump(else_jump);
                 self.emit_op(OpCode::Pop); // Pop le faux
                 self.compile_expression(*right);
+                self.patch_jump(end_jump);
+            },
+
+            Expression::Ternary(cond, then_expr, else_expr) => {
+                // 1. Condition
+                self.compile_expression(*cond);
+                
+                // 2. Saut vers le Else si Faux
+                let else_jump = self.emit_jump(OpCode::JumpIfFalse);
+                
+                // 3. Si Vrai : On pop la condition (true) et on évalue le Then
+                self.emit_op(OpCode::Pop);
+                self.compile_expression(*then_expr);
+                
+                // 4. Saut vers la fin (pour ne pas faire le Else)
+                let end_jump = self.emit_jump(OpCode::Jump);
+                
+                // 5. Label Else
+                self.patch_jump(else_jump);
+                self.emit_op(OpCode::Pop); // On pop la condition (false)
+                
+                // 6. Si Faux : On évalue le Else
+                self.compile_expression(*else_expr);
+                
+                // 7. Label Fin
                 self.patch_jump(end_jump);
             },
 

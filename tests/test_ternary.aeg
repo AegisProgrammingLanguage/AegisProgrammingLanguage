@@ -1,0 +1,20 @@
+print "--- TEST TERNAIRE ---"
+
+var age = 20
+var status = (age >= 18) ? "Majeur" : "Mineur"
+
+print "Age " + age + " : " + status
+
+if (status == "Majeur") {
+    print "✅ Test simple OK"
+}
+
+print ""
+print "--- TEST IMBRICATION ---"
+// FizzBuzz en une ligne (ne faites pas ça chez vous !)
+// (i % 3 == 0) ? "Fizz" : (i % 5 == 0) ? "Buzz" : i
+
+for (i, 1, 6, 1) {
+    var res = (i % 3 == 0) ? "Fizz" : ((i % 5 == 0) ? "Buzz" : i)
+    print i + " -> " + res
+}

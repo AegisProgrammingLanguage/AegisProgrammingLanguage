@@ -102,3 +102,40 @@ for (i, 0, 10, 1) {
 }
 // Output: 1, 3, 5, 7, 9
 ```
+
+## Ternary Operator
+
+For simple conditions where you want to assign a value based on a check, the standard `if/else` can be verbose. Aegis provides the **Ternary Operator** `? :` for this purpose.
+
+### Syntax
+
+```aegis
+condition ? value_if_true : value_if_false
+```
+
+### Example
+
+Instead of:
+
+```aegis
+var status = null
+if (age >= 18) {
+    status = "Adult"
+} else {
+    status = "Minor"
+}
+```
+
+You can write:
+
+```aegis
+var status = (age >= 18) ? "Adult" : "Minor"
+```
+
+### Nesting
+
+Ternary operators can be nested, although this can reduce readability.
+
+```aegis
+var category = (score > 90) ? "A" : ((score > 50) ? "B" : "C")
+```

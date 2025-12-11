@@ -24,7 +24,8 @@ pub enum TokenKind {
     BitAnd, BitOr, BitXor, ShiftLeft, ShiftRight,
     At,
     Arrow,
-    Super
+    Super,
+    Question
 }
 
 #[derive(Debug, Clone)]
@@ -112,6 +113,10 @@ impl<'a> Lexer<'a> {
                     self.add_token(&mut tokens, TokenKind::Colon);
                     self.chars.next(); 
                 }
+                '?' => {
+                    self.chars.next();
+                    self.add_token(&mut tokens, TokenKind::Question);
+                },
                 '+' => {
                     self.chars.next();
                     if let Some(&'=') = self.chars.peek() {
