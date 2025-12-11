@@ -1150,6 +1150,35 @@ impl VM {
 
                 "is_empty" => Value::Boolean(s.is_empty()),
 
+                "pad_start" => {
+                    // Args: width, char (optionnel, defaut ' ')
+                    let width = args[0].as_int().unwrap_or(0) as usize;
+                    let pad_char = if args.len() > 1 { 
+                        args[1].as_str().unwrap_or(" ".to_string()).chars().next().unwrap_or(' ') 
+                    } else { ' ' };
+
+                    if s.len() >= width {
+                        Value::String(s.clone())
+                    } else {
+                        let padding = pad_char.to_string().repeat(width - s.len());
+                        Value::String(format!("{}{}", padding, s))
+                    }
+                },
+
+                "pad_end" => {
+                    let width = args[0].as_int().unwrap_or(0) as usize;
+                    let pad_char = if args.len() > 1 { 
+                        args[1].as_str().unwrap_or(" ".to_string()).chars().next().unwrap_or(' ') 
+                    } else { ' ' };
+
+                    if s.len() >= width {
+                        Value::String(s.clone())
+                    } else {
+                        let padding = pad_char.to_string().repeat(width - s.len());
+                        Value::String(format!("{}{}", s, padding))
+                    }
+                },
+
                 _ => return Err(format!("Méthode string inconnue '{}'", method_name).into())
             },
 

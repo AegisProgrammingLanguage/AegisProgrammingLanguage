@@ -13,18 +13,20 @@ print first + " " + second // "Hello World"
 ```
 
 ## Methods
-| Method | Description |
-|--- |--- |
-| `.len()` | Returns the length of the string. |
-| `.trim()` | Removes whitespace from both ends. |
-| `.upper()` | Converts the entire string to uppercase. |
-| `.lower()` | Converts the entire string to lowercase. |
-| `.contains(sub)` | Returns `true` if the string contains the substring. |
-| `.starts_with(sub)` | Returns `true` if the string starts with the substring. |
-| `.ends_with(sub)` | Returns `true` if the string ends with the substring. |
-| `.replace(old, new)` | Replaces all occurrences of a substring. |
-| `.split(delimiter)` | Splits the string into a List of substrings. |
-| `.is_empty()` | Returns true if the string is empty, otherwise returns false. |
+| Method | Description | Example |
+| :--- | :--- | :--- |
+| `.len()` | Returns the length of the string. | `"Hi".len()` (2) |
+| `.trim()` | Removes whitespace from both ends. | `" a ".trim()` ("a") |
+| `.upper()` | Converts the entire string to uppercase. | `"aegis".upper()` ("AEGIS") |
+| `.lower()` | Converts the entire string to lowercase. | `"AEGIS".lower()` ("aegis") |
+| `.contains(sub)` | Returns `true` if the string contains the substring. | `"Hello".contains("el")` |
+| `.starts_with(sub)` | Returns `true` if the string starts with the substring. | `"file.txt".starts_with("file")` |
+| `.ends_with(sub)` | Returns `true` if the string ends with the substring. | `"image.png".ends_with(".png")` |
+| `.replace(old, new)` | Replaces all occurrences of a substring. | `"a-b-c".replace("-", ".")` |
+| `.split(delim)` | Splits the string into a List of substrings. | `"a,b".split(",")` |
+| `.is_empty()` | Returns `true` if the string length is 0. | `"".is_empty()` |
+| `.pad_start(len, char)` | Pads the start with `char` (default " ") until length is reached. | `"1".pad_start(3, "0")` ("001") |
+| `.pad_end(len, char)` | Pads the end with `char` (default " ") until length is reached. | `"Hi".pad_end(5, "!")` ("Hi!!!") |
 
 ### Examples
 Cleaning Input
