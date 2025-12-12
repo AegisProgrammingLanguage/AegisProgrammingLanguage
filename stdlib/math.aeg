@@ -50,11 +50,11 @@ namespace Math {
         if (exponent < 0) { return 0 } // Float support needed for negative exponent
         
         var result = 1
-        var i = 0
-        while (i < exponent) {
-            var result = result * base
-            var i = i + 1
+
+        foreach (i in 0..exponent) {
+            result *= base
         }
+
         return result
     }
 
@@ -65,12 +65,12 @@ namespace Math {
         if (n == 0) { return 0 }
         
         var x = n
-        var i = 0
+
         // 10 iterations is usually enough for decent precision
-        while (i < 10) {
-            var x = 0.5 * (x + n / x)
-            var i = i + 1
+        foreach (i in 0..10) {
+            x = 0.5 * (x + n / x)
         }
+
         return x
     }
 
@@ -116,7 +116,7 @@ namespace Math {
         var n = 1
         
         // Le calcul se fait maintenant sur un petit nombre, donc précis !
-        for (i, 0, 10, 1) {
+        foreach (i in 0..10) {
             var divisor = (2 * n) * (2 * n + 1)
             term = 0 - (term * angle * angle)
             term = term / divisor
@@ -137,7 +137,7 @@ namespace Math {
         var sum = 1
         var n = 1
         
-        for (i, 0, 10, 1) {
+        foreach (i in 0..10) {
             var divisor = (2 * n - 1) * (2 * n)
             term = 0 - (term * angle * angle)
             term = term / divisor
