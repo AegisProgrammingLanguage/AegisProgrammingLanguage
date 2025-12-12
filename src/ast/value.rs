@@ -17,12 +17,13 @@ pub struct FunctionData {
 pub struct ClassData {
     pub name: String,
     pub parent: Option<String>,
+    pub parent_ref: Option<Rc<ClassData>>,
     pub methods: HashMap<String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstanceData {
-    pub class: Rc<Value>, 
+    pub class: Rc<ClassData>, 
     pub fields: HashMap<String, Value>,
 }
 
@@ -75,14 +76,10 @@ impl fmt::Display for Value {
                  write!(f, "<Function({})>", p_str.join(", "))
             },
             Value::Class { 0: rc_class } => write!(f, "<Class {}>", rc_class.name),
-            Value::Instance(i) => {
-                let borrow = i.borrow();
-                
-                if let Value::Class(rc_class) = &*borrow.class {
-                     write!(f, "<Instance of {}>", rc_class.name)
-                } else {
-                     write!(f, "<Instance>")
-                }
+            Value::Instance(inst) => {
+                let borrow = inst.borrow();
+                // Accès direct au nom de la classe
+                write!(f, "<Instance of {}>", borrow.class.name)
             },
             Value::Native(name) => write!(f, "<Native Fn {}>", name),
             Value::Range(s, e, step) => write!(f, "{}..{} (step {})", s, e, step),

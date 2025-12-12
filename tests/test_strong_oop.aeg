@@ -1,0 +1,22 @@
+print "--- TEST OOP STRONG ---"
+
+class Entity { }
+class Player extends Entity { }
+class Admin extends Player { }
+
+var a = new Admin()
+
+print "is Admin?  " + is_instance(a, Admin)  // true
+print "is Player? " + is_instance(a, Player) // true (Héritage !)
+print "is Entity? " + is_instance(a, Entity) // true (Héritage !)
+print "is String? " + is_instance(a, String) // false (si String était une classe)
+
+print "\nModification dynamique test (Sécurité) :"
+// Si on change ce que "Player" veut dire globalement...
+var OldPlayer = Player
+class Impostor {}
+Player = Impostor 
+
+// ... l'instance 'a' doit toujours savoir qui est son VRAI parent (l'ancien Player)
+// car elle a stocké la référence, pas juste le nom "Player".
+print "Legacy check ok? " + is_instance(a, OldPlayer) // true (Doit rester vrai)

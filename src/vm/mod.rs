@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::ast::value::FunctionData;
+use crate::ast::value::{ClassData, FunctionData};
 use crate::ast::{InstanceData, Value};
 use crate::chunk::Chunk;
 use crate::opcode::OpCode;
@@ -648,9 +648,39 @@ impl VM {
 
             OpCode::Class => {
                 let idx = self.read_byte();
-                let class_val = self.current_frame().chunk().constants[idx as usize].clone();
-                self.push(class_val);
-            }
+                // On récupère le "template" créé par le compilateur
+                let template_val = self.current_frame().chunk().constants[idx as usize].clone();
+                
+                if let Value::Class(template_data) = template_val {
+                    // On prépare les données finales
+                    let mut final_parent_ref = None;
+
+                    // SI la classe a un parent déclaré (par nom)
+                    if let Some(parent_name) = &template_data.parent {
+                        // On le cherche dans les globales MAINTENANT
+                        if let Some(parent_val) = self.get_global_by_name(parent_name) {
+                            if let Value::Class(parent_rc) = parent_val {
+                                // BINGO ! On stocke la référence forte
+                                final_parent_ref = Some(parent_rc.clone());
+                            } else {
+                                return Err(format!("Le parent '{}' n'est pas une classe", parent_name));
+                            }
+                        } else {
+                            return Err(format!("Classe parente '{}' introuvable", parent_name));
+                        }
+                    }
+
+                    // On crée la VRAIE classe avec le lien établi
+                    let final_class = Value::Class(Rc::new(ClassData {
+                        name: template_data.name.clone(),
+                        parent: template_data.parent.clone(),
+                        parent_ref: final_parent_ref, // <--- LE LIEN EST FAIT ICI
+                        methods: template_data.methods.clone(),
+                    }));
+
+                    self.push(final_class);
+                }
+            },
 
             OpCode::MakeEnum => {
                 let count = self.read_byte() as usize; // Nombre total d'éléments sur la pile (clés + valeurs)
@@ -913,35 +943,34 @@ impl VM {
                 // Si Dog.speak appelle super, le bytecode contient "Animal".
                 
                 if let Some(parent_class_val) = self.get_global_by_name(&parent_name) {
-                    // On commence la recherche directement à ce niveau
-                    let mut current_class_val = Rc::new(parent_class_val);
                     
-                    // Logique identique à op_method, mais on commence au parent
+                    // 1. DÉBALLAGE IMMÉDIAT
+                    // On convertit Value::Class -> Rc<ClassData> tout de suite
+                    let mut current_class_rc = match parent_class_val {
+                        Value::Class(c) => c,
+                        _ => return Err(format!("'{}' n'est pas une classe", parent_name)),
+                    };
+
                     loop {
-                        if let Value::Class(rc_class) = &*current_class_val {
-                            // A. Trouvé ?
-                            if let Some(method_val) = rc_class.methods.get(&method_name) {
-                                // On remplace 'this' par la méthode sur la pile
-                                // ET on réinsère 'this' (comme op_method)
-                                self.stack[obj_idx] = method_val.clone();
-                                self.stack.insert(obj_idx + 1, obj.clone());
-                                
-                                self.call_value(method_val.clone(), arg_count + 1)?;
-                                return Ok(true); // Continue VM
-                            }
-                            
-                            // B. Remonter encore ?
-                            if let Some(grand_parent) = &rc_class.parent {
-                                if let Some(gp_val) = self.get_global_by_name(grand_parent) {
-                                    current_class_val = Rc::new(gp_val);
-                                    continue;
-                                }
-                            }
+                        // current_class_rc est maintenant bien un Rc<ClassData>
+                        // On a donc accès à .methods et .parent_ref
+                        if let Some(method_val) = current_class_rc.methods.get(&method_name) {
+                            self.stack[obj_idx] = method_val.clone();
+                            self.stack.insert(obj_idx + 1, obj.clone());
+                            self.call_value(method_val.clone(), arg_count + 1)?;
+                            return Ok(true);
                         }
-                        return Err(format!("Méthode '{}' introuvable dans le parent '{}' (ou ses ancêtres)", method_name, parent_name));
+
+                        // Remontée via référence forte (Type correct !)
+                        if let Some(p) = &current_class_rc.parent_ref {
+                            current_class_rc = p.clone(); // Rc<ClassData> -> Rc<ClassData>
+                            continue;
+                        }
+
+                        return Err(format!("Méthode '{}' introuvable dans super", method_name));
                     }
                 } else {
-                    return Err(format!("Classe parente '{}' introuvable au runtime", parent_name));
+                    return Err(format!("Classe parente '{}' introuvable", parent_name));
                 }
             },
             OpCode::MakeRange => {
@@ -975,35 +1004,27 @@ impl VM {
 
         // 1. Instance Methods (POO)
         if let Value::Instance(inst) = &obj {
-             // On commence par la classe de l'instance
-             let mut current_class_val = inst.borrow().class.clone();
-             
-             // Boucle de recherche (Prototype Chain)
-             loop {
-                 if let Value::Class(rc_class) = &*current_class_val {
-                     // A. Est-ce que la méthode est ici ?
-                     if let Some(method_val) = rc_class.methods.get(&method_name) {
-                         self.stack[obj_idx] = method_val.clone();
-                         self.stack.insert(obj_idx + 1, obj.clone()); 
-                         self.call_value(method_val.clone(), arg_count + 1)?; 
-                         return Ok(()); // Trouvé et appelé !
-                     }
-                     
-                     // B. Sinon, a-t-on un parent ?
-                     if let Some(parent_name) = &rc_class.parent {
-                         // On cherche la classe parente dans les globales
-                         if let Some(parent_class) = self.get_global_by_name(parent_name) {
-                             // On remonte d'un cran
-                             current_class_val = Rc::new(parent_class);
-                             continue;
-                         } else {
-                             return Err(format!("Classe parente introuvable : '{}'", parent_name).into());
-                         }
-                     }
-                 }
-                 // Si on arrive ici, c'est qu'on n'a pas trouvé et qu'il n'y a plus de parent
-                 break; 
-             }
+            // inst.borrow().class est maintenant directement Rc<ClassData>
+            // Plus besoin de déballer un Value::Class !
+            let mut current_class_rc = inst.borrow().class.clone();
+            
+            loop {
+                // A. Méthode présente ?
+                if let Some(method_val) = current_class_rc.methods.get(&method_name) {
+                    self.stack[obj_idx] = method_val.clone();
+                    self.stack.insert(obj_idx + 1, obj.clone()); 
+                    self.call_value(method_val.clone(), arg_count + 1)?; 
+                    return Ok(()); 
+                }
+                
+                // B. Parent ? (Via référence forte)
+                if let Some(parent_rc) = &current_class_rc.parent_ref {
+                    current_class_rc = parent_rc.clone();
+                    continue;
+                }
+                
+                break; // Non trouvé
+            }
         }
 
         if let Value::Dict(d) = &obj {
@@ -1389,33 +1410,25 @@ impl VM {
             // CAS 2 : Classe
             Value::Class(rc_class) => { // Déstructuration newtype
                 // 1. Création de l'instance vide
-                let class_val_rc = Rc::new(target.clone());
-                
                 let instance = Value::Instance(Rc::new(RefCell::new(InstanceData {
-                    class: class_val_rc,
+                    class: rc_class.clone(),
                     fields: HashMap::new()
                 })));
 
                 // 2. Recherche du constructeur "init"
-                // On doit chercher dans la classe ET ses parents (via get_method helper si tu en as un, 
-                // ou on réimplémente une petite recherche rapide ici).
                 let mut init_method = None;
                 let mut current_class = rc_class.clone();
 
                 // Recherche manuelle dans la chaîne de prototypes pour "init"
-                // (Copie simplifiée de la logique de op_method)
                 loop {
                     if let Some(m) = current_class.methods.get("init") {
                         init_method = Some(m.clone());
                         break;
                     }
-                    if let Some(p_name) = &current_class.parent {
-                         if let Some(p_val) = self.get_global_by_name(p_name) {
-                             if let Value::Class(p_rc) = p_val {
-                                 current_class = p_rc;
-                                 continue;
-                             }
-                         }
+                    
+                    if let Some(parent_rc) = &current_class.parent_ref {
+                        current_class = parent_rc.clone();
+                        continue;
                     }
                     break;
                 }

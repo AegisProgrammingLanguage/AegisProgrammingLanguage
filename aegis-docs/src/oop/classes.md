@@ -47,3 +47,42 @@ admin.name = "SuperAlice"
 admin.role = "Administrator"
 print admin.role // "Administrator"
 ```
+
+## Checking Types and Inheritance
+
+To verify if an object is an instance of a specific class, avoid comparing type names with strings. Instead, use the robust global function `is_instance()`.
+
+### `is_instance(object, class)`
+
+Returns `true` if the object is an instance of the class **or** if it inherits from it.
+
+### Example
+
+```aegis
+class Animal {}
+class Dog extends Animal {}
+
+var dog = new Dog()
+
+// Direct class check
+print is_instance(dog, Dog)    // true
+
+// Inheritance check (Polymorphism)
+print is_instance(dog, Animal) // true
+
+// Unrelated check
+print is_instance(dog, String) // false
+```
+
+### Why use is_instance?
+
+Unlike checking `type_of(obj) == "Dog"`, `is_instance` checks the actual structure in memory.
+- **Supports Inheritance**: It returns true `for` parent classes.
+- **Safety**: It works even if variables are renamed or aliases are used.
+
+```aegis
+var Pet = Dog
+var my_pet = new Pet()
+
+print is_instance(my_pet, Dog) // true
+```

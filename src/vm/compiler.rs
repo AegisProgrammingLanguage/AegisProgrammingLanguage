@@ -684,11 +684,12 @@ impl Compiler {
                 let class_val = Value::Class(Rc::new(ClassData {
                     name: def.name.clone(),
                     parent: def.parent.clone(),
+                    parent_ref: None,
                     methods: compiled_methods,
                 }));
 
                 let const_idx = self.chunk.add_constant(class_val);
-                self.emit_op(OpCode::LoadConst);
+                self.emit_op(OpCode::Class);
                 self.emit_byte(const_idx);
                 
                 let global_id = self.resolve_global(&def.name);

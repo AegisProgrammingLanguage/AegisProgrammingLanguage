@@ -1,16 +1,17 @@
 use crate::ast::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 pub fn register(map: &mut HashMap<String, super::NativeFn>) {
-    map.insert("str".to_string(), str);
+    map.insert("to_str".to_string(), to_str);
     map.insert("to_int".to_string(), to_int);
     map.insert("to_float".to_string(), to_float);
     map.insert("len".to_string(), len);
     map.insert("fmt".to_string(), fmt);
     map.insert("typeof".to_string(), type_of);
+    map.insert("is_instance".to_string(), is_instance);
 }
 
-fn str(args: Vec<Value>) -> Result<Value, String> {
+fn to_str(args: Vec<Value>) -> Result<Value, String> {
     Ok(Value::String(format!("{}", args[0])))
 }
 
@@ -78,16 +79,47 @@ fn type_of(args: Vec<Value>) -> Result<Value, String> {
         // Pour l'instance, on récupère le nom dynamiquement
         Value::Instance(i) => {
             let borrow = i.borrow();
-            // On déstructure le Tuple Struct (Value::Class(rc_data))
-            if let Value::Class(rc_class) = &*borrow.class {
-                rc_class.name.clone() // On accède via le Rc
-            } 
-            else {
-                "instance".to_string()
-            }
+            borrow.class.name.clone()
         },
         Value::Native(_) => "function".to_string()
     };
 
     Ok(Value::String(type_name))
+}
+
+fn is_instance(args: Vec<Value>) -> Result<Value, String> {
+    if args.len() != 2 { return Err("is_instance(obj, class)".into()); }
+
+    let instance = &args[0];
+    let target_class = &args[1];
+
+    // 1. Récupération "tolérante" de la classe cible
+    // Si le 2ème argument n'est pas une classe (ex: "String" qui est une fonction), 
+    // on retourne 'false' au lieu de crasher. C'est le comportement de 'instanceof' en JS.
+    let target_rc = match target_class {
+        Value::Class(c) => c,
+        _ => return Ok(Value::Boolean(false)), 
+    };
+
+    if let Value::Instance(inst) = instance {
+        // On récupère le pointeur vers la classe de l'instance
+        let mut current_class = inst.borrow().class.clone();
+
+        loop {
+            // 2. Comparaison par POINTEUR (Reference Equality)
+            // Beaucoup plus rapide et fiable que '=='
+            if Rc::ptr_eq(&current_class, target_rc) {
+                return Ok(Value::Boolean(true));
+            }
+
+            // 3. Remontée via la référence forte
+            if let Some(parent) = &current_class.parent_ref {
+                current_class = parent.clone();
+            } else {
+                break;
+            }
+        }
+    }
+
+    Ok(Value::Boolean(false))
 }
