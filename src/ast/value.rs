@@ -1,5 +1,5 @@
 use std::fmt;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::cell::RefCell;
 use serde::{Deserialize, Serialize};
@@ -33,6 +33,9 @@ pub struct ClassData {
 
     pub static_methods: HashMap<String, Value>,
     pub static_fields: RefCell<HashMap<String, Value>>,
+
+    pub is_final: bool,
+    pub final_methods: HashSet<String>,
 
     pub visibilities: HashMap<String, Visibility>,
 }

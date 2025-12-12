@@ -692,6 +692,37 @@ impl VM {
                         }
                     }
 
+                    if let Some(parent_rc) = &final_parent_ref {
+                        if parent_rc.is_final {
+                            return Err(format!("Erreur: La classe '{}' ne peut pas hériter de '{}' car elle est marquée 'final'.", template_data.name, parent_rc.name));
+                        }
+                    }
+
+                    // 2. VERIFICATION : MÉTHODES FINALES
+                    // Si on a un parent, on vérifie si on essaie d'écraser une méthode finale
+                    if let Some(parent_rc) = &final_parent_ref {
+                        // On itère sur les méthodes de la NOUVELLE classe (Instance + Static)
+                        
+                        // Helper pour checker une map
+                        let check_override = |methods_map: &HashMap<String, Value>| -> Result<(), String> {
+                            for method_name in methods_map.keys() {
+                                // Est-ce que le parent a cette méthode en 'final' ?
+                                // Note: Il faut remonter toute la chaîne des parents pour être sûr
+                                let mut curr = Some(parent_rc.clone());
+                                while let Some(p) = curr {
+                                    if p.final_methods.contains(method_name) {
+                                        return Err(format!("Erreur: Impossible de surcharger la méthode finale '{}' de la classe '{}'.", method_name, p.name));
+                                    }
+                                    curr = p.parent_ref.clone();
+                                }
+                            }
+                            Ok(())
+                        };
+
+                        check_override(&template_data.methods)?;
+                        check_override(&template_data.static_methods)?;
+                    }
+
                     // 2. Create the Final Class Structure
                     let final_class_rc = Rc::new(ClassData {
                         name: template_data.name.clone(),
@@ -700,6 +731,8 @@ impl VM {
                         methods: template_data.methods.clone(),
                         visibilities: template_data.visibilities.clone(),
                         fields: template_data.fields.clone(), // Instance fields initializers
+                        is_final: template_data.is_final,
+                        final_methods: template_data.final_methods.clone(),
                         
                         static_methods: template_data.static_methods.clone(),
                         static_fields: RefCell::new(HashMap::new()), // Will be filled below

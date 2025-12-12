@@ -82,3 +82,43 @@ print is_instance(d, Dog)    // true
 print is_instance(d, Animal) // true (Dog is an Animal)
 print is_instance(d, String) // false
 ```
+
+## Final Classes & Methods
+
+You can restrict inheritance and overriding using the `final` keyword. This is useful for security, creating immutable utilities, or enforcing a specific design.
+
+### Final Classes
+
+A `final` class **cannot be extended**. This effectively seals the class hierarchy at that point.
+
+```aegis
+final class Virus {
+    init() {}
+}
+
+// ❌ Error: Class 'Corona' cannot inherit from 'Virus' because it is marked 'final'.
+// class Corona extends Virus {}
+```
+
+### Final Methods
+
+A `final` method cannot be overridden by subclasses. This ensures that the behavior defined in the parent class remains consistent across all children.
+
+```aegis
+class God {
+    final func create_universe() {
+        print "Big Bang!"
+    }
+}
+
+class Human extends God {
+    // ❌ Error: Cannot override final method 'create_universe' of class 'God'.
+    /* func create_universe() {
+        print "I made this."
+    }
+    */
+}
+
+var h = new Human()
+h.create_universe() // "Big Bang!"
+```

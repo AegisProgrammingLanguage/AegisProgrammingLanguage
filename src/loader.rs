@@ -301,12 +301,14 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
                 // Si l'élément 2 existe et est true, c'est statique.
                 let is_static = if m_arr.len() > 2 {
                     m_arr[2].as_bool().unwrap_or(false)
-                } else {
-                    false
-                };
+                } else { false };
+
+                let is_final = if m_arr.len() > 3 {
+                    m_arr[3].as_bool().unwrap_or(false)
+                } else { false };
                 
                 // On insère le tuple (params, body, is_static)
-                methods.insert(m_name.clone(), (params, body, is_static));
+                methods.insert(m_name.clone(), (params, body, is_static, is_final));
             }
 
             // 2. Parsing du Parent
@@ -353,12 +355,17 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
                 }
             }
 
+            let is_class_final = if array.len() > 7 {
+                array[7].as_bool().unwrap_or(false)
+            } else { false };
+
             Ok(Instruction::Class(ClassDefinition {
                 name,
                 parent,
                 methods,
                 fields,
                 visibilities,
+                is_final: is_class_final
             }))
         },
 

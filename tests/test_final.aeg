@@ -1,0 +1,33 @@
+print "--- TEST FINAL KEYWORD ---"
+
+// 1. Test Méthode Finale
+class God {
+    final create_universe() {
+        print "Big Bang!"
+    }
+}
+
+class Human extends God {
+    // Ceci doit provoquer une erreur VM à la définition de la classe
+    /*
+    create_universe() {
+        print "Nope."
+    }
+    */
+}
+
+var h = new Human()
+h.create_universe() // "Big Bang!" (Héritage OK)
+
+
+// 2. Test Classe Finale
+final class Virus {
+    infect() {}
+}
+
+/*
+class Corona extends Virus { // Ceci doit provoquer une erreur VM
+}
+*/
+
+print "Tests Passed (Si décommenter provoque une erreur)"

@@ -80,7 +80,7 @@ impl Parser {
             TokenKind::If => self.parse_if(),
             TokenKind::While => self.parse_while(),
             TokenKind::Func => self.parse_func(),
-            TokenKind::Class => self.parse_class(),
+            TokenKind::Class | TokenKind::Final => self.parse_class(),
             TokenKind::Enum => self.parse_enum(),
             TokenKind::Return => self.parse_return(),
             TokenKind::Input => self.parse_input(),
@@ -494,7 +494,9 @@ impl Parser {
 
     fn parse_class(&mut self) -> Result<Value, String> {
         let line = self.current_line();
-        self.advance(); // Eat 'class'
+        let is_class_final = self.match_token(TokenKind::Final);
+
+        self.consume(TokenKind::Class, "Expect 'class'")?;
         
         // 1. Nom de la classe
         let name = if let TokenKind::Identifier(n) = &self.advance().kind { 
@@ -528,8 +530,9 @@ impl Parser {
                      else if self.match_token(TokenKind::Protected) { "protected" }
                      else { "public" };
 
-            // 2. Static ?
+            // 2. Static & Final ?
             let is_static = self.match_token(TokenKind::Static);
+            let is_final_method = self.match_token(TokenKind::Final);
 
             // 3. Analyse du membre
             
@@ -539,7 +542,7 @@ impl Parser {
                 let m_params = self.parse_params_list()?;
                 let m_body = self.parse_block()?;
                 
-                methods.insert(m_name.clone(), json!([m_params, m_body, is_static]));
+                methods.insert(m_name.clone(), json!([m_params, m_body, is_static, is_final_method]));
                 visibilities.insert(m_name, json!(vis_str));
             }
             // Cas Champ explicite 'var'
@@ -573,12 +576,12 @@ impl Parser {
         self.consume(TokenKind::RBrace, "Expect '}' after class body")?;
         
         // FORMAT JSON DE SORTIE (v0.3.0)
-        // ["class", line, name, methods, parent, fields, visibilities]
+        // ["class", line, name, methods, parent, fields, visibilities, is_final]
         
         let result = if parent.is_null() {
-            json!(["class", line, name, methods, null, fields, visibilities])
+            json!(["class", line, name, methods, null, fields, visibilities, is_class_final])
         } else {
-            json!(["class", line, name, methods, parent, fields, visibilities])
+            json!(["class", line, name, methods, parent, fields, visibilities, is_class_final])
         };
 
         Ok(result)

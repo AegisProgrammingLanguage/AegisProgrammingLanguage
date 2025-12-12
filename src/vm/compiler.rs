@@ -652,7 +652,9 @@ impl Compiler {
                 let mut compiled_methods = HashMap::new();
                 let mut compiled_static_methods = HashMap::new();
 
-                for (m_name, (m_params, m_body, is_static)) in def.methods {
+                let mut final_methods_set = std::collections::HashSet::new();
+
+                for (m_name, (m_params, m_body, is_static, is_final)) in def.methods {
                     // Chaque méthode a son propre compilateur (scope isolé)
                     let mut method_compiler = Compiler::new_with_globals(self.globals.clone());
                     method_compiler.scope_depth = 1;
@@ -709,6 +711,10 @@ impl Compiler {
                         // Note : owner_class sera rempli par la VM ou est implicite via le CallFrame
                     }));
 
+                    if is_final {
+                        final_methods_set.insert(m_name.clone());
+                    }
+
                     if is_static {
                         compiled_static_methods.insert(m_name, method_val);
                     } else {
@@ -759,6 +765,9 @@ impl Compiler {
 
                     static_methods: compiled_static_methods,
                     static_fields: RefCell::new(HashMap::new()),
+
+                    is_final: def.is_final,
+                    final_methods: final_methods_set,
                     
                     // Nouveaux champs v0.3.0
                     visibilities: def.visibilities, // HashMap<String, Visibility>

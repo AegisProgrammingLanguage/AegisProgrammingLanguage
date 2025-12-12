@@ -15,9 +15,10 @@ pub struct ClassField {
 pub struct ClassDefinition {
     pub name: String,
     pub parent: Option<String>,
-    pub methods: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>, bool)>,
+    pub methods: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>, bool, bool)>,
     pub fields: Vec<ClassField>,
-    pub visibilities: HashMap<String, Visibility>
+    pub visibilities: HashMap<String, Visibility>,
+    pub is_final: bool
 }
 
 #[derive(Debug, Clone, PartialEq)]

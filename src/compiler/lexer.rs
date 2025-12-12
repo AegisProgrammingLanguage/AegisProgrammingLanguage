@@ -31,7 +31,8 @@ pub enum TokenKind {
     ForEach, In,
     DotDot,
     Public, Protected, Private,
-    Static
+    Static,
+    Final
 }
 
 #[derive(Debug, Clone)]
@@ -413,6 +414,7 @@ impl<'a> Lexer<'a> {
             "private" => TokenKind::Private,
             "protected" => TokenKind::Protected,
             "static" => TokenKind::Static,
+            "final" => TokenKind::Final,
             _ => TokenKind::Identifier(s),
         };
 
