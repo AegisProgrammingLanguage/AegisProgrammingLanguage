@@ -76,3 +76,40 @@ var version = 0.2
 print "Welcome to ${name} version ${version}!"
 // Output: Welcome to Aegis version 0.2!
 ```
+
+## Compound Assignment
+
+Aegis provides shorthand operators to modify the value of a variable based on its current value. This avoids repeating the variable name.
+
+| Operator | Syntax | Equivalent To |
+| :--- | :--- | :--- |
+| `+=` | `x += y` | `x = x + y` |
+| `-=` | `x -= y` | `x = x - y` |
+| `*=` | `x *= y` | `x = x * y` |
+| `/=` | `x /= y` | `x = x / y` |
+
+### Examples
+
+```aegis
+var score = 10
+score += 5  // score is now 15
+score *= 2  // score is now 30
+```
+
+## Increment & Decrement
+
+To quickly add or subtract `1` from a number, you can use the increment (`++`) and decrement (`--`) operators.
+
+```aegis
+var i = 0
+i++ // i is now 1
+i++ // i is now 2
+i-- // i is now 1
+```
+
+These operators also work on object properties:
+
+```aegis
+player.hp -= 10
+player.level++
+```

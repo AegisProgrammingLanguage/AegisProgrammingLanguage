@@ -1,0 +1,31 @@
+print "--- TEST SUCRE SYNTAXIQUE ---"
+
+// 1. +=
+var x = 10
+x += 5
+print "x += 5 -> " + x // 15
+
+// 2. -=
+x -= 2
+print "x -= 2 -> " + x // 13
+
+// 3. *=
+x *= 2
+print "x *= 2 -> " + x // 26
+
+// 4. ++
+x++
+print "x++    -> " + x // 27
+
+// 5. --
+x--
+print "x--    -> " + x // 26
+
+// 6. Sur des objets (Propriétés)
+class Player { init(hp) { this.hp = hp } }
+var p = new Player(100)
+p.hp -= 10
+print "Player HP -= 10 -> " + p.hp // 90
+
+p.hp++
+print "Player HP++     -> " + p.hp // 91

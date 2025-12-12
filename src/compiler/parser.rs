@@ -90,6 +90,11 @@ impl Parser {
                 self.advance(); 
                 Ok(json!(["break", line])) 
             },
+            TokenKind::Continue => {
+                let line = self.current_line();
+                self.advance(); 
+                Ok(json!(["continue", line])) 
+            },
             TokenKind::Import => self.parse_import(),
             TokenKind::Try => self.parse_try(),
             TokenKind::Throw => self.parse_throw(),
@@ -98,59 +103,79 @@ impl Parser {
             TokenKind::Const => self.parse_const(),
             TokenKind::ForEach => self.parse_foreach(),
             
-            TokenKind::Identifier(_) | TokenKind::Super => {
+            // --- GESTION DES EXPRESSIONS ET ASSIGNATIONS ---
+            TokenKind::Identifier(_) | TokenKind::Super | TokenKind::LParen => {
                 let line = self.current_line();
+                // 1. On parse la partie gauche (ex: "x", "obj.prop", "list.at(0)")
                 let expr = self.parse_expression()?;
 
                 match self.peek() {
+                    // Assignation standard (=)
                     TokenKind::Eq => {
                         self.advance();
                         let value = self.parse_expression()?;
                         return self.convert_to_assignment(line, expr, value);
                     },
+                    
+                    // Assignations composées (+=, -=, *=, /=)
+                    TokenKind::PlusEq => {
+                        self.advance();
+                        let value = self.parse_expression()?;
+                        // Sucre : x = x + val
+                        let operation = json!(["+", expr.clone(), value]);
+                        return self.convert_to_assignment(line, expr, operation);
+                    },
+                    TokenKind::MinusEq => {
+                        self.advance();
+                        let value = self.parse_expression()?;
+                        // Sucre : x = x - val
+                        let operation = json!(["-", expr.clone(), value]);
+                        return self.convert_to_assignment(line, expr, operation);
+                    },
+                    TokenKind::StarEq => {
+                        self.advance();
+                        let value = self.parse_expression()?;
+                        // Sucre : x = x * val
+                        let operation = json!(["*", expr.clone(), value]);
+                        return self.convert_to_assignment(line, expr, operation);
+                    },
+                    TokenKind::SlashEq => {
+                        self.advance();
+                        let value = self.parse_expression()?;
+                        // Sucre : x = x / val
+                        let operation = json!(["/", expr.clone(), value]);
+                        return self.convert_to_assignment(line, expr, operation);
+                    },
+
+                    // Incrémentation / Décrémentation (++, --)
                     TokenKind::PlusPlus => {
                         self.advance();
                         let one = json!(1);
-                        let new_val = json!(["+", expr.clone(), one]);
-                        return self.convert_to_assignment(line, expr, new_val);
+                        // Sucre : x = x + 1
+                        let operation = json!(["+", expr.clone(), one]);
+                        return self.convert_to_assignment(line, expr, operation);
                     },
                     TokenKind::MinusMinus => {
                         self.advance();
                         let one = json!(1);
-                        let new_val = json!(["-", expr.clone(), one]);
-                        return self.convert_to_assignment(line, expr, new_val);
+                        // Sucre : x = x - 1
+                        let operation = json!(["-", expr.clone(), one]);
+                        return self.convert_to_assignment(line, expr, operation);
                     },
-                    TokenKind::PlusEq => {
-                        self.advance();
-                        let val = self.parse_expression()?;
-                        let new_val = json!(["+", expr.clone(), val]);
-                        return self.convert_to_assignment(line, expr, new_val);
-                    },
-                    TokenKind::MinusEq => {
-                        self.advance();
-                        let val = self.parse_expression()?;
-                        let new_val = json!(["-", expr.clone(), val]);
-                        return self.convert_to_assignment(line, expr, new_val);
-                    },
-                    TokenKind::StarEq => {
-                        self.advance();
-                        let val = self.parse_expression()?;
-                        let new_val = json!(["*", expr.clone(), val]);
-                        return self.convert_to_assignment(line, expr, new_val);
-                    },
-                    TokenKind::SlashEq => {
-                        self.advance();
-                        let val = self.parse_expression()?;
-                        let new_val = json!(["/", expr.clone(), val]);
-                        return self.convert_to_assignment(line, expr, new_val);
-                    },
+
+                    // Expression seule (appel de fonction, etc.)
                     _ => {
+                        // Hack pour ajouter la ligne aux appels pour les stacktraces
                         if let Some(arr) = expr.as_array() {
                             let mut new_arr = arr.clone();
                             if !new_arr.is_empty() {
                                 if let Some(cmd) = new_arr[0].as_str() {
                                     if cmd == "call" || cmd == "call_method" || cmd == "super_call" {
-                                        new_arr.insert(1, json!(line));
+                                        // On insère le numéro de ligne à l'index 1 si pas déjà fait
+                                        // (Dépend de ta structure JSON, mais ton code précédent faisait ça)
+                                        if new_arr.len() > 1 && !new_arr[1].is_u64() {
+                                             new_arr.insert(1, json!(line));
+                                        }
                                         return Ok(Value::Array(new_arr));
                                     }
                                 }
@@ -159,12 +184,6 @@ impl Parser {
                         Ok(expr) 
                     }
                 }
-            },
-
-            TokenKind::Continue => {
-                let line = self.current_line();
-                self.advance(); 
-                Ok(json!(["continue", line])) 
             },
             
             _ => Err(format!("Unexpected token at start of statement: {:?} (Line {})", self.peek(), self.current_line())),
