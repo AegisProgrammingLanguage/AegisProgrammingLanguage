@@ -99,3 +99,33 @@ var pi = 3.14159265
 print fmt(pi, ".2f") // "3.14"
 print fmt(pi, ".4f") // "3.1416"
 ```
+
+## Text Encoding & Unicode
+
+To handle low-level string manipulation, Aegis provides standard functions to convert between characters and their integer representations.
+
+### Char
+**Syntax**: `chr(code)`
+
+Converts a Unicode integer code point into a string containing the corresponding character.
+- **Arguments**: `int` (The Unicode code point).
+- **Returns**: `string`.
+
+```aegis
+print chr(65)   // "A"
+print chr(97)   // "a"
+print chr(8364) // "€"
+```
+
+### Ord
+**Syntax**: `ord(string)`
+
+Returns the integer Unicode code point of the first character in the given string.
+- Arguments: `string`.
+- Returns: `int`.
+
+```aegis
+print ord("A")  // 65
+print ord("€")  // 8364
+print ord("🚀") // 128640
+```

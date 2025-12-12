@@ -1,0 +1,76 @@
+print "--- TEST UTILS v0.2.4 ---"
+
+// ---------------------------------------------------------
+// 1. Test ASCII / Unicode (chr, ord)
+// ---------------------------------------------------------
+print "\n[1] Char & Ord"
+
+var charCode = ord("A")
+print "ord('A') -> " + charCode
+
+var charStr = chr(65)
+print "chr(65)  -> " + charStr
+
+// Test avec Unicode (Emoji)
+var emoji = "🚀"
+var eCode = ord(emoji)
+print "ord('🚀') -> " + eCode
+print "Back to  -> " + chr(eCode)
+
+
+// ---------------------------------------------------------
+// 2. Test List.index_of
+// ---------------------------------------------------------
+print "\n[2] List.index_of"
+
+var fruits = ["pomme", "banane", "cerise"]
+
+var idx1 = fruits.index_of("banane")
+print "Index de 'banane' (attendu 1) : " + idx1
+
+var idx2 = fruits.index_of("kiwi")
+print "Index de 'kiwi'   (attendu -1): " + idx2
+
+
+// ---------------------------------------------------------
+// 3. Test List.find
+// ---------------------------------------------------------
+print "\n[3] List.find"
+
+var users = [
+    { "id": 1, "name": "Alice", "role": "admin" },
+    { "id": 2, "name": "Bob",   "role": "user"  },
+    { "id": 3, "name": "Charly", "role": "user" }
+]
+
+// Cas nominal : Trouver par propriété
+var bob = users.find(func(u) {
+    return u.name == "Bob"
+})
+
+if (bob != null) {
+    print "Found User: " + bob.name + " (ID: " + bob.id + ")"
+} else {
+    print "Bob not found!"
+}
+
+// Cas échec : Trouver inexistant
+var dave = users.find(func(u) { return u.name == "Dave" })
+print "Find Dave (attendu null): " + dave
+
+
+// ---------------------------------------------------------
+// 4. Test List.sort (Rappel)
+// ---------------------------------------------------------
+print "\n[4] List.sort"
+
+// Tri simple
+var nums = [10, 2, 50, 5]
+nums.sort()
+print "Sorted Nums: " + nums
+
+// Tri personnalisé (par ID décroissant)
+users.sort(func(a, b) {
+    return b.id - a.id
+})
+print "First User (ID max): " + users.at(0).name

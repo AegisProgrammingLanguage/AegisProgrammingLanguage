@@ -1111,6 +1111,117 @@ impl VM {
                     accumulator
                 },
 
+                "index_of" => {
+                    // Usage: list.index_of(value) -> int (ou -1)
+                    if args.len() < 1 { return Err("index_of attend 1 argument".into()); }
+                    let target = &args[0];
+                    
+                    let list = l.borrow();
+                    let index = list.iter().position(|x| x == target); // PartialEq fait le travail
+                    
+                    match index {
+                        Some(i) => Value::Integer(i as i64),
+                        None => Value::Integer(-1),
+                    }
+                },
+
+                "find" => {
+                    if args.len() < 1 { return Err("find attend 1 callback".into()); }
+                    let callback = args[0].clone();
+                    
+                    let list_data = l.borrow().clone();
+                    
+                    // 1. Variable pour stocker le résultat (par défaut Null)
+                    let mut found_item = Value::Null;
+                    
+                    for item in list_data {
+                        let res = self.run_callable_sync(callback.clone(), vec![item.clone()])?;
+                        
+                        let is_found = match res {
+                            Value::Boolean(b) => b,
+                            Value::Null => false,
+                            Value::Integer(i) => i != 0,
+                            _ => true,
+                        };
+                        
+                        if is_found {
+                            found_item = item; // On stocke
+                            break;             // On arrête la recherche
+                        }
+                    }
+                    
+                    // 2. On retourne la valeur trouvée (ou Null) comme résultat du match
+                    found_item 
+                },
+
+                "sort" => {
+                    // 1. On clone le vecteur pour pouvoir le trier sans violer les règles d'emprunt (RefCell)
+                    // Cela permet aussi au callback de comparaison de lire la liste si nécessaire sans crash.
+                    let mut data = l.borrow().clone();
+                    
+                    // 2. Récupération du comparateur optionnel (fonction de callback)
+                    let comparator = if args.len() > 0 { Some(args[0].clone()) } else { None };
+                    
+                    // 3. Logique de Tri
+                    if let Some(comp_fn) = comparator {
+                        // --- CAS A : TRI PERSONNALISÉ ---
+                        // On utilise une variable pour capturer une erreur éventuelle survenue dans le callback Aegis
+                        let mut sort_error = None;
+                        
+                        data.sort_by(|a, b| {
+                            // Si une erreur a déjà eu lieu, on arrête de calculer (on renvoie Equal)
+                            if sort_error.is_some() { return std::cmp::Ordering::Equal; }
+                            
+                            // Appel Synchrone de la VM : on exécute la fonction Aegis
+                            match self.run_callable_sync(comp_fn.clone(), vec![a.clone(), b.clone()]) {
+                                Ok(res) => {
+                                    // La convention standard : négatif = Less, positif = Greater, 0 = Equal
+                                    // On essaie de convertir en entier, sinon en float
+                                    let n = if let Ok(i) = res.as_int() { i as f64 } 
+                                            else { res.as_float().unwrap_or(0.0) };
+
+                                    if n < 0.0 { std::cmp::Ordering::Less }
+                                    else if n > 0.0 { std::cmp::Ordering::Greater }
+                                    else { std::cmp::Ordering::Equal }
+                                },
+                                Err(e) => {
+                                    // On capture l'erreur pour la remonter après le sort
+                                    sort_error = Some(e);
+                                    std::cmp::Ordering::Equal
+                                }
+                            }
+                        });
+                        
+                        // Si le tri a échoué à cause d'une erreur script, on la propage
+                        if let Some(e) = sort_error { return Err(e); }
+                        
+                    } else {
+                        // --- CAS B : TRI PAR DÉFAUT ---
+                        // Rust ne sait pas trier nativement nos Values sans implémenter Ord.
+                        // On implémente une logique "best effort".
+                        data.sort_by(|a, b| {
+                             match (a, b) {
+                                 // Comparaison d'entiers
+                                 (Value::Integer(i1), Value::Integer(i2)) => i1.cmp(i2),
+                                 // Comparaison de floats (partial_cmp peut renvoyer None pour NaN, on gère)
+                                 (Value::Float(f1), Value::Float(f2)) => f1.partial_cmp(f2).unwrap_or(std::cmp::Ordering::Equal),
+                                 // Mixte Int/Float
+                                 (Value::Integer(i), Value::Float(f)) => (*i as f64).partial_cmp(f).unwrap_or(std::cmp::Ordering::Equal),
+                                 (Value::Float(f), Value::Integer(i)) => f.partial_cmp(&(*i as f64)).unwrap_or(std::cmp::Ordering::Equal),
+                                 // Chaînes de caractères
+                                 (Value::String(s1), Value::String(s2)) => s1.cmp(s2),
+                                 // Fallback : Comparaison via représentation string (ex: "true" > "false")
+                                 (v1, v2) => v1.to_string().cmp(&v2.to_string())
+                             }
+                        });
+                    }
+                    
+                    // 4. On remplace le contenu de la liste originale par la version triée
+                    *l.borrow_mut() = data;
+                    
+                    Value::Null
+                },
+
                 // --- Utility ---
 
                 "slice" => {

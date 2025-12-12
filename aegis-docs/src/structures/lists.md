@@ -38,15 +38,21 @@ You can add and remove elements dynamically.
 | `.push(value)` | Adds an element to the end of the list. | `list.push(5)` |
 | `.pop()` | Removes and returns the last element. | `var last = list.pop()` |
 | `.len()` | Returns the number of elements. | `list.len()` |
-| `.reverse()` | Reverses elements **in-place** and returns the list itself. | `list.reverse().at(0)` |
-| `.contains(val)` | Returns `true` if the value exists in the list. | `if (list.contains("admin")) { ... }` |
+| `.reverse()` | Reverses elements in-place and returns the list itself. | `list.reverse()` |
+| `.contains(val)` | Returns true if the value exists in the list. | `if (list.contains("admin")) { ... }` |
+| `.index_of(val)` | Returns the index of the first occurrence of val, or -1 if not found. | `var idx = list.index_of("banana")` |
 | `.join(sep)` | Joins all elements into a single string using a separator. | `list.join(", ")` |
-| `.is_empty()` | Returns true if the list is empty, otherwise returns false. | `if (list.is_empty()) { ... }` |
+| `.is_empty()` | Returns true if the list is empty. | `if (list.is_empty()) { ... }` |
 | `.first()` | Returns the first element of the list. | `var first = list.first()` |
 | `.last()` | Returns the last element of the list. | `var last = list.last()` |
-| `.clear()` | Remove all items from the list. | `list.clear()` |
-| `.reduce(fn, init)` | Reduces the list to a single value using an accumulator. | `var sum = [1, 2, 3].reduce(func(acc, n) { return acc + n }, 0) // 6` |
-| `.slice(start, end)` | Returns a sub-list from start to end (exclusive). | `var page1 = items.slice(0, 10)` |
+| `.clear()` | Removes all items from the list. | `list.clear()` |
+| `.slice(start, end)` | Returns a new sub-list from start to end (exclusive). | `var sub = items.slice(0, 10)` |
+| `.sort(fn?)` | Sorts the list in-place. Accepts an optional comparison function func(a,b). | `list.sort(func(a,b) { return a - b })` |
+| `.find(fn)` | Returns the first element where the callback returns true, or null. | `var u = users.find(func(u) { return u.id == 1 })` |
+| `.map(fn)` | Creates a new list with the results of calling a function on every element. | `var squares = nums.map(func(n) { return n * n })` |
+| `.filter(fn)` | Creates a new list with all elements that pass the test implemented by the function. | `var adults = users.filter(func(u) { return u.age >= 18 })` |
+| `.reduce(fn, init)` | Reduces the list to a single value using an accumulator. | `var sum = nums.reduce(func(acc, n) { return acc + n }, 0)` |
+| `.for_each(fn)` | Executes a provided function once for each array element. | `list.for_each(func(item) { print item })` |
 
 ### Example
 ```

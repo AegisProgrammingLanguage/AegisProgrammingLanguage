@@ -5,6 +5,8 @@ pub fn register(map: &mut HashMap<String, super::NativeFn>) {
     map.insert("to_str".to_string(), to_str);
     map.insert("to_int".to_string(), to_int);
     map.insert("to_float".to_string(), to_float);
+    map.insert("chr".to_string(), chr);
+    map.insert("ord".to_string(), ord);
     map.insert("len".to_string(), len);
     map.insert("fmt".to_string(), fmt);
     map.insert("typeof".to_string(), type_of);
@@ -21,6 +23,30 @@ fn to_int(args: Vec<Value>) -> Result<Value, String> {
 
 fn to_float(args: Vec<Value>) -> Result<Value, String> {
     Ok(Value::Float(args[0].as_float()?))
+}
+
+fn chr(args: Vec<Value>) -> Result<Value, String> {
+    if args.len() != 1 { return Err("chr attend 1 argument (int)".into()); }
+    
+    let code = args[0].as_int()?;
+    // Conversion sécurisée u32 -> char
+    if let Some(c) = std::char::from_u32(code as u32) {
+        Ok(Value::String(c.to_string()))
+    } else {
+        Err(format!("Code caractère invalide : {}", code))
+    }
+}
+
+fn ord(args: Vec<Value>) -> Result<Value, String> {
+    if args.len() != 1 { return Err("ord attend 1 argument (string)".into()); }
+    
+    let s = args[0].as_str()?;
+    // On prend le premier caractère
+    if let Some(c) = s.chars().next() {
+        Ok(Value::Integer(c as i64))
+    } else {
+        Ok(Value::Integer(0)) // Chaîne vide
+    }
 }
 
 fn len(args: Vec<Value>) -> Result<Value, String> {
