@@ -29,7 +29,8 @@ pub enum TokenKind {
     DoubleQuestion,
     Const,
     ForEach, In,
-    DotDot
+    DotDot,
+    Public, Protected, Private
 }
 
 #[derive(Debug, Clone)]
@@ -407,6 +408,9 @@ impl<'a> Lexer<'a> {
             "const" => TokenKind::Const,
             "foreach" => TokenKind::ForEach,
             "in" => TokenKind::In,
+            "public" => TokenKind::Public,
+            "private" => TokenKind::Private,
+            "protected" => TokenKind::Protected,
             _ => TokenKind::Identifier(s),
         };
 

@@ -674,8 +674,10 @@ impl VM {
                     let final_class = Value::Class(Rc::new(ClassData {
                         name: template_data.name.clone(),
                         parent: template_data.parent.clone(),
-                        parent_ref: final_parent_ref, // <--- LE LIEN EST FAIT ICI
+                        parent_ref: final_parent_ref,
                         methods: template_data.methods.clone(),
+                        visibilities: template_data.visibilities.clone(),
+                        fields: template_data.fields.clone(),
                     }));
 
                     self.push(final_class);
@@ -1519,26 +1521,64 @@ impl VM {
             },
 
             // CAS 2 : Classe
-            Value::Class(rc_class) => { // Déstructuration newtype
-                // 1. Création de l'instance vide
-                let instance = Value::Instance(Rc::new(RefCell::new(InstanceData {
+            Value::Class(rc_class) => {
+                // 1. Création de l'instance vide (avec le bon type Rc<ClassData>)
+                let instance_rc = Rc::new(RefCell::new(InstanceData {
                     class: rc_class.clone(),
                     fields: HashMap::new()
-                })));
+                }));
 
-                // 2. Recherche du constructeur "init"
+                // 2. On crée la Value pour la VM
+                let instance = Value::Instance(instance_rc.clone());
+
+                // --- INITIALISATION DES CHAMPS ---
+                // On doit remonter toute la chaîne de prototypes (parents d'abord)
+                // pour initialiser les champs dans le bon ordre (optionnel, mais propre).
+                // Ici, on fait simple : on initialise les champs de la classe courante.
+                // Note : Si tu veux supporter les champs hérités, il faut iterer sur les parents.
+                
+                // On collecte la chaîne d'héritage (du plus lointain parent à l'enfant)
+                let mut hierarchy = Vec::new();
+                let mut curr = Some(rc_class.clone());
+                while let Some(c) = curr {
+                    hierarchy.push(c.clone());
+                    curr = c.parent_ref.clone();
+                }
+                hierarchy.reverse(); // On commence par le Grand-Père
+
+                // On exécute les initialiseurs
+                for class_def in hierarchy {
+                    for (field_name, init_val_or_func) in &class_def.fields {
+                        // Si l'initialiseur est une fonction (cas compilé par nous), on l'exécute
+                        if let Value::Function(init_func) = init_val_or_func {
+                            // Appel synchrone de la fonction d'initialisation (sans arguments)
+                            // Elle retourne la valeur par défaut (ex: 100)
+                            match self.run_callable_sync(Value::Function(init_func.clone()), vec![]) {
+                                Ok(val) => {
+                                    // On insère dans l'instance
+                                    instance_rc.borrow_mut().fields.insert(field_name.clone(), val);
+                                },
+                                Err(e) => return Err(format!("Erreur initialisation champ '{}': {}", field_name, e)),
+                            }
+                        } else {
+                            // Cas théorique (si on stockait des constantes brutes)
+                            instance_rc.borrow_mut().fields.insert(field_name.clone(), init_val_or_func.clone());
+                        }
+                    }
+                }
+                // -------------------------------------------
+
+                // 2. Recherche du constructeur "init" (Logique existante)
                 let mut init_method = None;
-                let mut current_class = rc_class.clone();
+                let mut current_class_lookup = rc_class.clone();
 
-                // Recherche manuelle dans la chaîne de prototypes pour "init"
                 loop {
-                    if let Some(m) = current_class.methods.get("init") {
+                    if let Some(m) = current_class_lookup.methods.get("init") {
                         init_method = Some(m.clone());
                         break;
                     }
-                    
-                    if let Some(parent_rc) = &current_class.parent_ref {
-                        current_class = parent_rc.clone();
+                    if let Some(parent_rc) = &current_class_lookup.parent_ref {
+                        current_class_lookup = parent_rc.clone();
                         continue;
                     }
                     break;
@@ -1546,26 +1586,17 @@ impl VM {
 
                 // 3. Appel du constructeur
                 if let Some(method_val) = init_method {
-                    // On récupère les arguments depuis la pile
                     let args_start = func_idx + 1;
                     let args: Vec<Value> = self.stack.drain(args_start..).collect();
                     
-                    // On injecte 'this' (l'instance qu'on vient de créer)
-                    // Attention : run_callable_sync attend [args], mais comme c'est une méthode, 
-                    // la convention Aegis (compiler) attend 'this' en premier argument.
                     let mut call_args = vec![instance.clone()];
                     call_args.extend(args);
 
-                    // Appel Synchrone : On exécute init maintenant
                     self.run_callable_sync(method_val, call_args)?;
                 } else {
-                    // Pas de constructeur : Si des arguments ont été passés, c'est une erreur ?
-                    // En Python, object() ne prend pas d'arguments.
                     if arg_count > 0 {
-                        return Err(format!("Classe '{}' n'a pas de constructeur 'init', mais {} arguments fournis.", rc_class.name, arg_count));
+                        return Err(format!("Classe '{}' n'a pas de constructeur 'init'", rc_class.name));
                     }
-                    
-                    // On nettoie la pile (arguments vides s'il y en a, théoriquement non)
                     self.stack.truncate(func_idx + 1);
                 }
                 

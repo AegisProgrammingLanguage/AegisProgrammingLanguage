@@ -1,10 +1,18 @@
 use serde_json::Value as JsonValue;
-use crate::ast::{Instruction, Expression, Value, Statement};
+use crate::ast::{ClassDefinition, Expression, Instruction, Statement, Value, nodes::ClassField, value::Visibility};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub fn parse_block(block_json: &JsonValue) -> Result<Vec<Statement>, String> {
     let array = block_json.as_array().ok_or("Block must be a JSON array")?;
     array.iter().map(|instr| parse_statement_json(instr)).collect()
+}
+
+fn parse_visibility(v: &str) -> Visibility {
+    match v {
+        "private" => Visibility::Private,
+        "protected" => Visibility::Protected,
+        _ => Visibility::Public,
+    }
 }
 
 fn json_to_value(json: &JsonValue) -> Result<Value, String> {
@@ -260,28 +268,95 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
         },
         
         "class" => {
-            let name = array[2].as_str().unwrap().to_string();
-
-            let methods_map = array[3].as_object().unwrap();
-            let mut methods = HashMap::new();
-            for (k, v) in methods_map {
-                let m_arr = v.as_array().unwrap();
-                let m_params_json = m_arr[0].as_array().unwrap();
-                let mut m_params = Vec::new();
-                for p in m_params_json {
-                    if let Some(s) = p.as_str() { m_params.push((s.to_string(), None)); }
-                    else if let Some(pair) = p.as_array() {
-                        m_params.push((pair[0].as_str().unwrap().to_string(), pair[1].as_str().map(|s| s.to_string())));
+            // ["class", line, name, methods, parent, fields, visibilities]
+            
+            let name = array[2].as_str().ok_or("Invalid class name")?.to_string();
+            
+            // 1. Parsing des Méthodes (Adapté à ta HashMap)
+            let methods_map_json = array[3].as_object().ok_or("Invalid methods object")?;
+            let mut methods = std::collections::HashMap::new();
+            
+            for (m_name, m_data) in methods_map_json {
+                let m_arr = m_data.as_array().ok_or("Invalid method array")?;
+                // Structure JSON méthode: [params, body]
+                
+                // A. Params
+                let params_arr = m_arr[0].as_array().ok_or("Invalid params array")?;
+                let mut params = Vec::new();
+                for p in params_arr {
+                    // Chaque param est [name, type_opt] ou juste name selon ton parser
+                    // Ton parser actuel semble générer [name, type] via parse_params_list
+                    // Adapte si ton JSON est différent. Supposons ["name", "type"] ou "name"
+                    if let Some(p_row) = p.as_array() {
+                         let p_name = p_row[0].as_str().unwrap().to_string();
+                         let p_type = if p_row.len() > 1 && !p_row[1].is_null() {
+                             Some(p_row[1].as_str().unwrap().to_string())
+                         } else {
+                             None
+                         };
+                         params.push((p_name, p_type));
+                    } else if let Some(p_name) = p.as_str() {
+                        params.push((p_name.to_string(), None));
                     }
                 }
-                let m_body = parse_block(&m_arr[1])?;
-                methods.insert(k.clone(), (m_params, m_body));
+                
+                // B. Body
+                let body_json = &m_arr[1];
+                // parse_block attend généralement un &Value qui est un Array
+                let body = parse_block(body_json)?;
+                
+                // Insertion dans ta HashMap
+                // Signature: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>)>
+                methods.insert(m_name.clone(), (params, body));
             }
-            let parent = if array.len() > 4 { array[4].as_str().map(|s| s.to_string()) } else { None };
-            Ok(Instruction::Class(crate::ast::ClassDefinition { 
-                name, 
-                parent, 
-                methods 
+
+            // 2. Parsing du Parent
+            let parent = if array[4].is_null() {
+                None
+            } else {
+                Some(array[4].as_str().unwrap().to_string())
+            };
+
+            // 3. Parsing des Champs (Fields) - NOUVEAU
+            let mut fields = Vec::new();
+            if array.len() > 5 {
+                if let Some(fields_arr) = array[5].as_array() {
+                    for f in fields_arr {
+                        let f_data = f.as_array().ok_or("Invalid field struct")?;
+                        // JSON: ["field", name, vis_str, default_val]
+                        
+                        let f_name = f_data[1].as_str().unwrap().to_string();
+                        let f_vis_str = f_data[2].as_str().unwrap();
+                        let f_default_json = &f_data[3];
+                        
+                        let default_expr = parse_expression(f_default_json)?;
+                        
+                        fields.push(ClassField {
+                            name: f_name,
+                            visibility: parse_visibility(f_vis_str),
+                            default_value: default_expr,
+                        });
+                    }
+                }
+            }
+
+            // 4. Parsing des Visibilités (Visibilities) - NOUVEAU
+            let mut visibilities = std::collections::HashMap::new();
+            if array.len() > 6 {
+                if let Some(vis_obj) = array[6].as_object() {
+                    for (key, val) in vis_obj {
+                        let vis_str = val.as_str().unwrap_or("public");
+                        visibilities.insert(key.clone(), parse_visibility(vis_str));
+                    }
+                }
+            }
+
+            Ok(Instruction::Class(ClassDefinition {
+                name,
+                parent,
+                methods,
+                fields,
+                visibilities,
             }))
         },
 

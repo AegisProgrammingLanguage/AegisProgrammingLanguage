@@ -1,0 +1,68 @@
+print "--- TEST POO v0.3.0 (Modern Syntax) ---"
+
+class Wallet {
+    // 1. Déclaration de champs avec visibilité + valeur par défaut
+    private balance = 100
+    public currency = "EUR"
+    
+    // Champ sans valeur par défaut (sera null)
+    protected owner
+
+    // 2. Le constructeur peut surcharger les défauts
+    init(owner_name, start_amount) {
+        this.owner = owner_name
+        
+        if (start_amount != null) {
+            this.balance = start_amount
+        }
+    }
+
+    // 3. Méthodes publiques
+    public credit(amount) {
+        this.balance += amount // Utilise le sucre syntaxique +=
+    }
+
+    public get_info() {
+        return this.owner + " has " + this.balance + " " + this.currency
+    }
+    
+    // 4. Méthode privée (interne)
+    private log_transaction() {
+        print "Log: Transaction done."
+    }
+}
+
+class CryptoWallet extends Wallet {
+    // Surcharge de champ avec nouvelle valeur par défaut
+    public currency = "BTC"
+
+    init(owner) {
+        super.init(owner, 0)
+    }
+    
+    public check_access() {
+        // Test accès protected (OK)
+        print "Accessing protected owner: " + this.owner
+        
+        // Test accès private (Devrait échouer au runtime plus tard)
+        // print this.balance 
+    }
+}
+
+print "\n[1] Instanciation Standard"
+var w = new Wallet("Alice", 50)
+w.credit(25)
+print w.get_info() 
+// Attendu : "Alice has 75 EUR" (Si la VM initialise bien les champs)
+
+print "\n[2] Valeurs par défaut"
+var w_def = new Wallet("Bob", null)
+print w_def.get_info()
+// Attendu : "Bob has 100 EUR" (Si la VM exécute l'expression '= 100')
+
+print "\n[3] Héritage et Surcharge de champ"
+var cw = new CryptoWallet("Satoshi")
+print cw.get_info()
+// Attendu : "Satoshi has 0 BTC" (Currency surchargé à BTC)
+
+cw.check_access()

@@ -2,6 +2,8 @@ use std::fmt;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
+use serde::{Deserialize, Serialize};
+
 use crate::ast::Environment;
 use crate::chunk::Chunk;
 
@@ -13,12 +15,21 @@ pub struct FunctionData {
     pub env: Option<Rc<RefCell<Environment>>>, // SharedEnv
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Visibility {
+    Public,
+    Protected,
+    Private,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassData {
     pub name: String,
     pub parent: Option<String>,
     pub parent_ref: Option<Rc<ClassData>>,
     pub methods: HashMap<String, Value>,
+    pub visibilities: HashMap<String, Visibility>,
+    pub fields: HashMap<String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

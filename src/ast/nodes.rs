@@ -1,11 +1,22 @@
+use crate::ast::value::Visibility;
+
 use super::value::Value; // Import Value from sibling module
 use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClassField {
+    pub name: String,
+    pub visibility: Visibility,
+    pub default_value: Expression, // Expression à évaluer à l'instanciation
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassDefinition {
     pub name: String,
     pub parent: Option<String>,
     pub methods: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>)>,
+    pub fields: Vec<ClassField>,
+    pub visibilities: HashMap<String, Visibility>
 }
 
 #[derive(Debug, Clone, PartialEq)]

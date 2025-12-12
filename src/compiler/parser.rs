@@ -495,28 +495,109 @@ impl Parser {
     fn parse_class(&mut self) -> Result<Value, String> {
         let line = self.current_line();
         self.advance(); // Eat 'class'
-        let name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Class Name".into()); };
         
+        // 1. Nom de la classe
+        let name = if let TokenKind::Identifier(n) = &self.advance().kind { 
+            n.clone() 
+        } else { 
+            return Err("Expect Class Name".into()); 
+        };
+        
+        // 2. Héritage optionnel
         let mut parent = Value::Null;
         if self.match_token(TokenKind::Extends) {
-            if let TokenKind::Identifier(n) = &self.advance().kind { parent = json!(n); }
+            if let TokenKind::Identifier(n) = &self.advance().kind { 
+                parent = json!(n); 
+            } else {
+                return Err("Expect Parent Class Name".into());
+            }
         }
         
-        self.consume(TokenKind::LBrace, "{")?;
+        self.consume(TokenKind::LBrace, "Expect '{' before class body")?;
+        
+        // Structures de stockage pour le JSON final
         let mut methods = serde_json::Map::new();
+        let mut visibilities = serde_json::Map::new(); // Map<Nom, "public"|"private"|"protected">
+        let mut fields = Vec::new(); // Liste de ["field", nom, visibilité, valeur_defaut]
+
         while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
-            let m_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Method Name".into()); };
-            let m_params = self.parse_params_list()?;
-            let m_body = self.parse_block()?;
-            methods.insert(m_name, json!([m_params, m_body]));
+            
+            // A. DÉTECTION DE LA VISIBILITÉ
+            // On regarde si un modificateur est présent. Défaut : "public".
+            let vis_str = if self.match_token(TokenKind::Public) { "public" }
+                     else if self.match_token(TokenKind::Private) { "private" }
+                     else if self.match_token(TokenKind::Protected) { "protected" }
+                     else { "public" };
+
+            // B. ANALYSE DU MEMBRE (Méthode ou Champ ?)
+            
+            // Cas 1 : Mot-clé explicite 'func' -> C'est une méthode
+            if self.match_token(TokenKind::Func) {
+                let m_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Method Name".into()); };
+                let m_params = self.parse_params_list()?;
+                let m_body = self.parse_block()?;
+                
+                methods.insert(m_name.clone(), json!([m_params, m_body]));
+                visibilities.insert(m_name, json!(vis_str));
+            }
+            // Cas 2 : Mot-clé explicite 'var' -> C'est un champ
+            else if self.match_token(TokenKind::Var) {
+                let f_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Field Name".into()); };
+                
+                // Valeur par défaut optionnelle (ex: var x = 10)
+                let default_val = if self.match_token(TokenKind::Eq) {
+                    self.parse_expression()?
+                } else {
+                    json!(null)
+                };
+                
+                // Structure JSON Field: ["field", name, vis, default_val]
+                fields.push(json!(["field", f_name.clone(), vis_str, default_val]));
+                visibilities.insert(f_name, json!(vis_str));
+            }
+            // Cas 3 : Pas de mot-clé (ex: "init()", "x = 10", "private x")
+            else {
+                // On doit lire le nom pour décider ensuite
+                let member_name = if let TokenKind::Identifier(n) = &self.advance().kind { 
+                    n.clone() 
+                } else { 
+                    return Err(format!("Expect member name inside class (Line {})", self.current_line())); 
+                };
+
+                // On regarde le token SUIVANT pour savoir ce que c'est
+                if self.check(&TokenKind::LParen) {
+                    // C'est une méthode : nom(...) { ... }
+                    let m_params = self.parse_params_list()?;
+                    let m_body = self.parse_block()?;
+                    
+                    methods.insert(member_name.clone(), json!([m_params, m_body]));
+                    visibilities.insert(member_name, json!(vis_str));
+                } else {
+                    // C'est un champ : nom = val  OU juste  nom
+                    let default_val = if self.match_token(TokenKind::Eq) {
+                        self.parse_expression()?
+                    } else {
+                        json!(null)
+                    };
+                    
+                    fields.push(json!(["field", member_name.clone(), vis_str, default_val]));
+                    visibilities.insert(member_name, json!(vis_str));
+                }
+            }
         }
-        self.consume(TokenKind::RBrace, "}")?;
         
-        if parent.is_null() {
-            Ok(json!(["class", line, name, methods]))
+        self.consume(TokenKind::RBrace, "Expect '}' after class body")?;
+        
+        // FORMAT JSON DE SORTIE (v0.3.0)
+        // ["class", line, name, methods, parent, fields, visibilities]
+        
+        let result = if parent.is_null() {
+            json!(["class", line, name, methods, null, fields, visibilities])
         } else {
-            Ok(json!(["class", line, name, methods, parent]))
-        }
+            json!(["class", line, name, methods, parent, fields, visibilities])
+        };
+
+        Ok(result)
     }
 
     fn parse_enum(&mut self) -> Result<Value, String> {

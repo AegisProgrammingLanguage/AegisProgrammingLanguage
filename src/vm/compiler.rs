@@ -647,54 +647,130 @@ impl Compiler {
             },
 
             Instruction::Class(def) => {
+                // 1. COMPILATION DES MÉTHODES
+                // On va stocker les méthodes compilées (Value::Function) dans une HashMap
                 let mut compiled_methods = HashMap::new();
 
                 for (m_name, (m_params, m_body)) in def.methods {
+                    // Chaque méthode a son propre compilateur (scope isolé)
                     let mut method_compiler = Compiler::new_with_globals(self.globals.clone());
                     method_compiler.scope_depth = 1;
+                    
+                    // On transmet le nom du parent (utile pour 'super' qui vérifie context_parent_name)
                     method_compiler.context_parent_name = def.parent.clone();
                     
+                    // A. Paramètres de la méthode
+                    // Convention : 'this' est toujours le paramètre implicite 0
                     let mut actual_params = vec![("this".to_string(), None)];
                     actual_params.extend(m_params.clone());
 
-                    for (i, (param_name, _)) in actual_params.iter().enumerate() {
+                    for (i, (param_name, param_type)) in actual_params.iter().enumerate() {
                         method_compiler.locals.insert(param_name.clone(), LocalInfo {
                             index: i as u8,
                             is_const: false
                         });
+                        
+                        // Si le paramètre est typé, on ajoute une vérification runtime au début du bytecode
+                        if let Some(t) = param_type {
+                            method_compiler.emit_op(OpCode::GetLocal);
+                            method_compiler.emit_byte(i as u8);
+                            
+                            let type_idx = method_compiler.chunk.add_constant(Value::String(t.clone()));
+                            method_compiler.emit_op(OpCode::CheckType);
+                            method_compiler.emit_byte(type_idx);
+                            
+                            method_compiler.emit_op(OpCode::Pop); // Nettoyage après check
+                        }
                     }
+
+                    // B. Corps de la méthode
                     for stmt in m_body {
                         method_compiler.compile_instruction(stmt.kind);
                     }
+                    
+                    // C. Retour implicite (Null) si on arrive au bout
                     method_compiler.emit_op(OpCode::LoadConst);
                     let null_idx = method_compiler.chunk.add_constant(Value::Null);
                     method_compiler.emit_byte(null_idx);
                     method_compiler.emit_op(OpCode::Return);
 
+                    // D. Debug info pour les variables locales
+                    for (name, info) in &method_compiler.locals {
+                        method_compiler.chunk.locals_map.insert(info.index, name.clone());
+                    }
+
+                    // E. Création de la Value::Function
                     let method_val = Value::Function(Rc::new(FunctionData {
-                        params: actual_params,
-                        ret_type: None,
+                        params: actual_params, // On garde la signature complète
+                        ret_type: None, // Tu pourrais ajouter le support du type de retour ici
                         chunk: method_compiler.chunk,
-                        env: None
+                        env: None, // Les méthodes ne capturent pas l'environnement extérieur (pas des closures)
+                        // Note : owner_class sera rempli par la VM ou est implicite via le CallFrame
                     }));
 
                     compiled_methods.insert(m_name, method_val);
                 }
 
+                // 2. COMPILATION DES CHAMPS (Initialiseurs) - NOUVEAU
+                // Chaque champ qui a une valeur par défaut devient une mini-fonction d'initialisation
+                let mut compiled_fields = HashMap::new();
+                
+                for field in def.fields {
+                    // On compile l'expression par défaut dans un contexte isolé
+                    let mut field_compiler = Compiler::new_with_globals(self.globals.clone());
+                    // Pas de scope depth particulier, c'est comme une fonction statique
+                    
+                    // On compile l'expression (ex: "10 + 5")
+                    field_compiler.compile_expression(field.default_value);
+                    
+                    // On retourne le résultat
+                    field_compiler.emit_op(OpCode::Return);
+                    
+                    // On emballe dans une Value::Function
+                    let init_func = Value::Function(Rc::new(FunctionData {
+                        params: vec![], // 0 arguments
+                        ret_type: None,
+                        chunk: field_compiler.chunk,
+                        env: None,
+                    }));
+                    
+                    compiled_fields.insert(field.name, init_func);
+                }
+
+                // 3. CRÉATION DE LA CLASSDATA
+                // On utilise la nouvelle structure ClassData enrichie
                 let class_val = Value::Class(Rc::new(ClassData {
                     name: def.name.clone(),
                     parent: def.parent.clone(),
-                    parent_ref: None,
+                    parent_ref: None, // Sera résolu par la VM via OpCode::Class
+                    
                     methods: compiled_methods,
+                    
+                    // Nouveaux champs v0.3.0
+                    visibilities: def.visibilities, // HashMap<String, Visibility>
+                    fields: compiled_fields,        // HashMap<String, Value::Function> (Initialiseurs)
                 }));
 
+                // 4. ÉMISSION DU BYTECODE DE CRÉATION
                 let const_idx = self.chunk.add_constant(class_val);
-                self.emit_op(OpCode::Class);
+                self.emit_op(OpCode::Class); // Instruction spéciale qui résout parent_ref
                 self.emit_byte(const_idx);
                 
-                let global_id = self.resolve_global(&def.name);
-                self.emit_op(OpCode::SetGlobal);
-                self.emit_byte(global_id);
+                // 5. ENREGISTREMENT (Global ou Local)
+                // Par défaut, les classes sont souvent globales, mais Aegis permet des classes locales
+                if self.scope_depth > 0 {
+                    let idx = self.locals.len() as u8;
+                    self.locals.insert(def.name.clone(), LocalInfo {
+                        index: idx,
+                        is_const: false
+                    });
+                    // La classe est sur la pile, elle devient une locale
+                    // SetLocal implicite (comme pour Function)
+                } else {
+                    let global_id = self.resolve_global(&def.name);
+                    self.emit_op(OpCode::SetGlobal);
+                    self.emit_byte(global_id);
+                }
             },
 
             Instruction::SetAttr(obj, attr, val) => {
