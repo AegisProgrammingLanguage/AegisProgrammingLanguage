@@ -594,6 +594,21 @@ impl VM {
                             .unwrap_or(Value::Null);
                         self.push(val);
                     }
+                    Value::Class(class_rc) => {
+                        // 1. Check Security
+                        self.check_access(&class_rc, &attr_name)?;
+
+                        // 2. Look in Static Fields
+                        if let Some(val) = class_rc.static_fields.borrow().get(&attr_name) {
+                            self.push(val.clone());
+                        } 
+                        // 3. Look in Static Methods
+                        else if let Some(method) = class_rc.static_methods.get(&attr_name) {
+                            self.push(method.clone());
+                        } else {
+                            return Err(format!("Unknown static member '{}' on class '{}'", attr_name, class_rc.name));
+                        }
+                    }
                     Value::Dict(d) => {
                         let val = d.borrow().get(&attr_name).cloned().unwrap_or(Value::Null);
                         self.push(val);
@@ -627,6 +642,11 @@ impl VM {
                         inst.borrow_mut().fields.insert(attr_name, val.clone());
                         self.push(val); // L'expression d'assignation retourne la valeur
                     }
+                    Value::Class(class_rc) => {
+                        self.check_access(&class_rc, &attr_name)?; // Security
+                        class_rc.static_fields.borrow_mut().insert(attr_name, val.clone());
+                        self.push(val);
+                    }
                     Value::Dict(d) => {
                         d.borrow_mut().insert(attr_name, val.clone());
                         self.push(val);
@@ -655,39 +675,59 @@ impl VM {
 
             OpCode::Class => {
                 let idx = self.read_byte();
-                // On récupère le "template" créé par le compilateur
                 let template_val = self.current_frame().chunk().constants[idx as usize].clone();
                 
                 if let Value::Class(template_data) = template_val {
-                    // On prépare les données finales
+                    // 1. Resolve Parent
                     let mut final_parent_ref = None;
-
-                    // SI la classe a un parent déclaré (par nom)
                     if let Some(parent_name) = &template_data.parent {
-                        // On le cherche dans les globales MAINTENANT
                         if let Some(parent_val) = self.get_global_by_name(parent_name) {
                             if let Value::Class(parent_rc) = parent_val {
-                                // BINGO ! On stocke la référence forte
                                 final_parent_ref = Some(parent_rc.clone());
                             } else {
-                                return Err(format!("Le parent '{}' n'est pas une classe", parent_name));
+                                return Err(format!("Parent '{}' is not a class", parent_name));
                             }
                         } else {
-                            return Err(format!("Classe parente '{}' introuvable", parent_name));
+                            return Err(format!("Parent class '{}' not found", parent_name));
                         }
                     }
 
-                    // On crée la VRAIE classe avec le lien établi
-                    let final_class = Value::Class(Rc::new(ClassData {
+                    // 2. Create the Final Class Structure
+                    let final_class_rc = Rc::new(ClassData {
                         name: template_data.name.clone(),
                         parent: template_data.parent.clone(),
                         parent_ref: final_parent_ref,
                         methods: template_data.methods.clone(),
                         visibilities: template_data.visibilities.clone(),
-                        fields: template_data.fields.clone(),
-                    }));
+                        fields: template_data.fields.clone(), // Instance fields initializers
+                        
+                        static_methods: template_data.static_methods.clone(),
+                        static_fields: RefCell::new(HashMap::new()), // Will be filled below
+                    });
 
-                    self.push(final_class);
+                    // 3. EXECUTE STATIC FIELDS INITIALIZERS
+                    // The compiler stored the initializer functions inside the template's static_fields.
+                    // We extract them, execute them, and store the result in the final class.
+                    
+                    let static_inits = template_data.static_fields.borrow().clone();
+                    
+                    for (name, init_val_or_func) in static_inits {
+                        let final_val = if let Value::Function(func) = init_val_or_func {
+                            // Execute static initializer (ex: static x = 10 + 5)
+                            // Context is the class itself
+                            self.run_callable_sync(
+                                Value::Function(func), 
+                                vec![], 
+                                Some(final_class_rc.clone())
+                            )?
+                        } else {
+                            init_val_or_func // Raw constant
+                        };
+
+                        final_class_rc.static_fields.borrow_mut().insert(name, final_val);
+                    }
+
+                    self.push(Value::Class(final_class_rc));
                 }
             },
 
@@ -1040,6 +1080,42 @@ impl VM {
                 
                 break; // Non trouvé
             }
+        }
+
+        if let Value::Class(class_rc) = &obj {
+            // Search in static methods of the class itself
+            // Note: Inheritance of static methods is possible in some languages.
+            // For now, let's look in the class itself (simplification).
+            // To support static inheritance: Loop on parent_ref like in Instance.
+            
+            let mut current_lookup = class_rc.clone();
+            loop {
+                if let Some(method_val) = current_lookup.static_methods.get(&method_name) {
+                    // A. Security Check
+                    self.check_access(&current_lookup, &method_name)?;
+
+                    // B. Setup Stack
+                    self.stack[obj_idx] = method_val.clone();
+                    // We reinject the Class Object as 'this' (argument 0)
+                    self.stack.insert(obj_idx + 1, obj.clone()); 
+
+                    // C. Call with Context
+                    self.call_value(
+                        method_val.clone(), 
+                        arg_count + 1, 
+                        Some(current_lookup.clone())
+                    )?;
+                    return Ok(());
+                }
+                
+                // Static Inheritance (Optional but nice)
+                if let Some(parent) = &current_lookup.parent_ref {
+                    current_lookup = parent.clone();
+                    continue;
+                }
+                break;
+            }
+            return Err(format!("Static method '{}' not found on class '{}'", method_name, class_rc.name).into());
         }
 
         if let Value::Dict(d) = &obj {

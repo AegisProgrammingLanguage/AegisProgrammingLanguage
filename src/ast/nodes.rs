@@ -8,13 +8,14 @@ pub struct ClassField {
     pub name: String,
     pub visibility: Visibility,
     pub default_value: Expression, // Expression à évaluer à l'instanciation
+    pub is_static: bool
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassDefinition {
     pub name: String,
     pub parent: Option<String>,
-    pub methods: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>)>,
+    pub methods: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>, bool)>,
     pub fields: Vec<ClassField>,
     pub visibilities: HashMap<String, Visibility>
 }

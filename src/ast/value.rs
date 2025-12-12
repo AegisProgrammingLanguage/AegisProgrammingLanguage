@@ -27,9 +27,14 @@ pub struct ClassData {
     pub name: String,
     pub parent: Option<String>,
     pub parent_ref: Option<Rc<ClassData>>,
+
     pub methods: HashMap<String, Value>,
-    pub visibilities: HashMap<String, Visibility>,
     pub fields: HashMap<String, Value>,
+
+    pub static_methods: HashMap<String, Value>,
+    pub static_fields: RefCell<HashMap<String, Value>>,
+
+    pub visibilities: HashMap<String, Visibility>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

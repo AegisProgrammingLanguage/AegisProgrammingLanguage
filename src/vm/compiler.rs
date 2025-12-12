@@ -650,8 +650,9 @@ impl Compiler {
                 // 1. COMPILATION DES MÉTHODES
                 // On va stocker les méthodes compilées (Value::Function) dans une HashMap
                 let mut compiled_methods = HashMap::new();
+                let mut compiled_static_methods = HashMap::new();
 
-                for (m_name, (m_params, m_body)) in def.methods {
+                for (m_name, (m_params, m_body, is_static)) in def.methods {
                     // Chaque méthode a son propre compilateur (scope isolé)
                     let mut method_compiler = Compiler::new_with_globals(self.globals.clone());
                     method_compiler.scope_depth = 1;
@@ -708,12 +709,17 @@ impl Compiler {
                         // Note : owner_class sera rempli par la VM ou est implicite via le CallFrame
                     }));
 
-                    compiled_methods.insert(m_name, method_val);
+                    if is_static {
+                        compiled_static_methods.insert(m_name, method_val);
+                    } else {
+                        compiled_methods.insert(m_name, method_val);
+                    }
                 }
 
                 // 2. COMPILATION DES CHAMPS (Initialiseurs) - NOUVEAU
                 // Chaque champ qui a une valeur par défaut devient une mini-fonction d'initialisation
                 let mut compiled_fields = HashMap::new();
+                let mut compiled_static_fields = HashMap::new();
                 
                 for field in def.fields {
                     // On compile l'expression par défaut dans un contexte isolé
@@ -734,7 +740,11 @@ impl Compiler {
                         env: None,
                     }));
                     
-                    compiled_fields.insert(field.name, init_func);
+                    if field.is_static {
+                        compiled_static_fields.insert(field.name, init_func);
+                    } else {
+                        compiled_fields.insert(field.name, init_func);
+                    }
                 }
 
                 // 3. CRÉATION DE LA CLASSDATA
@@ -745,11 +755,20 @@ impl Compiler {
                     parent_ref: None, // Sera résolu par la VM via OpCode::Class
                     
                     methods: compiled_methods,
+                    fields: compiled_fields,        // HashMap<String, Value::Function> (Initialiseurs)
+
+                    static_methods: compiled_static_methods,
+                    static_fields: RefCell::new(HashMap::new()),
                     
                     // Nouveaux champs v0.3.0
                     visibilities: def.visibilities, // HashMap<String, Visibility>
-                    fields: compiled_fields,        // HashMap<String, Value::Function> (Initialiseurs)
                 }));
+
+                // Hack: On injecte les initialiseurs statiques dans static_fields pour le transport
+                // Il faudra juste cast le RefCell pour l'init
+                if let Value::Class(ref c) = class_val {
+                    *c.static_fields.borrow_mut() = compiled_static_fields;
+                }
 
                 // 4. ÉMISSION DU BYTECODE DE CRÉATION
                 let const_idx = self.chunk.add_constant(class_val);

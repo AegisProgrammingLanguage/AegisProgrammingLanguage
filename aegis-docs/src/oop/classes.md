@@ -94,3 +94,54 @@ if (is_instance(admin, User)) {
     print "This is a user."
 }
 ```
+
+## Static Members
+
+You can define fields and methods that belong to the **class itself**, rather than to instances of the class. These are called static members.
+
+Use the `static` keyword to declare them. Static members can also have visibility modifiers (`public`, `private`).
+
+### Usage
+
+Static members are accessed using the class name: `ClassName.member`.
+
+```aegis
+class MathUtils {
+    // A class constant
+    public static PI = 3.14159
+    
+    // A static method
+    static circle_area(radius) {
+        // Inside a static method, 'this' refers to the Class itself
+        return this.PI * radius * radius
+    }
+}
+
+print MathUtils.PI // 3.14159
+print MathUtils.circle_area(10) // 314.159
+```
+
+## Static vs Instance
+- Instance Members: Created for each new object (e.g., `new User("Bob")`).
+- Static Members: Created once when the class is defined. They are shared.
+
+This is particularly useful for configuration, counters, or Factory patterns.
+
+```aegis
+class Database {
+    private static connection_count = 0
+    
+    init() {
+        Database.connection_count += 1
+    }
+    
+    static get_active_connections() {
+        return this.connection_count
+    }
+}
+
+var db1 = new Database()
+var db2 = new Database()
+
+print Database.get_active_connections() // 2
+```

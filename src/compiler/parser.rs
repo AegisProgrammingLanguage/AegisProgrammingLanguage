@@ -522,65 +522,49 @@ impl Parser {
 
         while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
             
-            // A. DÉTECTION DE LA VISIBILITÉ
-            // On regarde si un modificateur est présent. Défaut : "public".
+            // 1. Visibilité
             let vis_str = if self.match_token(TokenKind::Public) { "public" }
                      else if self.match_token(TokenKind::Private) { "private" }
                      else if self.match_token(TokenKind::Protected) { "protected" }
                      else { "public" };
 
-            // B. ANALYSE DU MEMBRE (Méthode ou Champ ?)
+            // 2. Static ?
+            let is_static = self.match_token(TokenKind::Static);
+
+            // 3. Analyse du membre
             
-            // Cas 1 : Mot-clé explicite 'func' -> C'est une méthode
+            // Cas Méthode explicite 'func'
             if self.match_token(TokenKind::Func) {
                 let m_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Method Name".into()); };
                 let m_params = self.parse_params_list()?;
                 let m_body = self.parse_block()?;
                 
-                methods.insert(m_name.clone(), json!([m_params, m_body]));
+                methods.insert(m_name.clone(), json!([m_params, m_body, is_static]));
                 visibilities.insert(m_name, json!(vis_str));
             }
-            // Cas 2 : Mot-clé explicite 'var' -> C'est un champ
+            // Cas Champ explicite 'var'
             else if self.match_token(TokenKind::Var) {
                 let f_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Field Name".into()); };
+                let default_val = if self.match_token(TokenKind::Eq) { self.parse_expression()? } else { json!(null) };
                 
-                // Valeur par défaut optionnelle (ex: var x = 10)
-                let default_val = if self.match_token(TokenKind::Eq) {
-                    self.parse_expression()?
-                } else {
-                    json!(null)
-                };
-                
-                // Structure JSON Field: ["field", name, vis, default_val]
-                fields.push(json!(["field", f_name.clone(), vis_str, default_val]));
+                // JSON Field: ["field", name, vis, default_val, is_static] <--- Ajout à la fin
+                fields.push(json!(["field", f_name.clone(), vis_str, default_val, is_static]));
                 visibilities.insert(f_name, json!(vis_str));
             }
-            // Cas 3 : Pas de mot-clé (ex: "init()", "x = 10", "private x")
+            // Cas Implicite (identifiant...)
             else {
-                // On doit lire le nom pour décider ensuite
-                let member_name = if let TokenKind::Identifier(n) = &self.advance().kind { 
-                    n.clone() 
-                } else { 
-                    return Err(format!("Expect member name inside class (Line {})", self.current_line())); 
-                };
+                let member_name = if let TokenKind::Identifier(n) = &self.advance().kind { n.clone() } else { return Err("Member name".into()); };
 
-                // On regarde le token SUIVANT pour savoir ce que c'est
                 if self.check(&TokenKind::LParen) {
-                    // C'est une méthode : nom(...) { ... }
+                    // Méthode
                     let m_params = self.parse_params_list()?;
                     let m_body = self.parse_block()?;
-                    
-                    methods.insert(member_name.clone(), json!([m_params, m_body]));
+                    methods.insert(member_name.clone(), json!([m_params, m_body, is_static]));
                     visibilities.insert(member_name, json!(vis_str));
                 } else {
-                    // C'est un champ : nom = val  OU juste  nom
-                    let default_val = if self.match_token(TokenKind::Eq) {
-                        self.parse_expression()?
-                    } else {
-                        json!(null)
-                    };
-                    
-                    fields.push(json!(["field", member_name.clone(), vis_str, default_val]));
+                    // Champ
+                    let default_val = if self.match_token(TokenKind::Eq) { self.parse_expression()? } else { json!(null) };
+                    fields.push(json!(["field", member_name.clone(), vis_str, default_val, is_static]));
                     visibilities.insert(member_name, json!(vis_str));
                 }
             }

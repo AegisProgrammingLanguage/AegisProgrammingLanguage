@@ -278,36 +278,35 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
             
             for (m_name, m_data) in methods_map_json {
                 let m_arr = m_data.as_array().ok_or("Invalid method array")?;
-                // Structure JSON méthode: [params, body]
+                
+                // JSON attendu : [params, body, is_static]
                 
                 // A. Params
                 let params_arr = m_arr[0].as_array().ok_or("Invalid params array")?;
                 let mut params = Vec::new();
                 for p in params_arr {
-                    // Chaque param est [name, type_opt] ou juste name selon ton parser
-                    // Ton parser actuel semble générer [name, type] via parse_params_list
-                    // Adapte si ton JSON est différent. Supposons ["name", "type"] ou "name"
                     if let Some(p_row) = p.as_array() {
                          let p_name = p_row[0].as_str().unwrap().to_string();
                          let p_type = if p_row.len() > 1 && !p_row[1].is_null() {
                              Some(p_row[1].as_str().unwrap().to_string())
-                         } else {
-                             None
-                         };
+                         } else { None };
                          params.push((p_name, p_type));
-                    } else if let Some(p_name) = p.as_str() {
-                        params.push((p_name.to_string(), None));
                     }
                 }
                 
                 // B. Body
-                let body_json = &m_arr[1];
-                // parse_block attend généralement un &Value qui est un Array
-                let body = parse_block(body_json)?;
+                let body = parse_block(&m_arr[1])?;
+
+                // C. Static (NOUVEAU)
+                // Si l'élément 2 existe et est true, c'est statique.
+                let is_static = if m_arr.len() > 2 {
+                    m_arr[2].as_bool().unwrap_or(false)
+                } else {
+                    false
+                };
                 
-                // Insertion dans ta HashMap
-                // Signature: HashMap<String, (Vec<(String, Option<String>)>, Vec<Statement>)>
-                methods.insert(m_name.clone(), (params, body));
+                // On insère le tuple (params, body, is_static)
+                methods.insert(m_name.clone(), (params, body, is_static));
             }
 
             // 2. Parsing du Parent
@@ -327,14 +326,17 @@ pub fn parse_statement_json(json_instr: &JsonValue) -> Result<Statement, String>
                         
                         let f_name = f_data[1].as_str().unwrap().to_string();
                         let f_vis_str = f_data[2].as_str().unwrap();
-                        let f_default_json = &f_data[3];
-                        
-                        let default_expr = parse_expression(f_default_json)?;
+                        let default_expr = parse_expression(&f_data[3])?;
+
+                        let is_static = if f_data.len() > 4 {
+                            f_data[4].as_bool().unwrap_or(false)
+                        } else { false };
                         
                         fields.push(ClassField {
                             name: f_name,
                             visibility: parse_visibility(f_vis_str),
                             default_value: default_expr,
+                            is_static
                         });
                     }
                 }

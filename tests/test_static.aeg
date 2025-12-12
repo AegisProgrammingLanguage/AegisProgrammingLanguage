@@ -1,0 +1,36 @@
+print "--- TEST STATIC POO ---"
+
+class Database {
+    public static MAX_CONN = 5
+    private static active = 0
+    
+    // Static Initializer logic check
+    public static CONFIG = { "host": "localhost" }
+
+    public static connect() {
+        if (this.active < this.MAX_CONN) {
+            this.active += 1
+            print "Connected! Active: " + this.active
+            return new Database()
+        } else {
+            print "Error: Max connections reached"
+            return null
+        }
+    }
+    
+    // Private static access
+    public static get_active_count() {
+        return this.active
+    }
+}
+
+print "Max Connections: " + Database.MAX_CONN
+print "Config Host: " + Database.CONFIG.host
+
+var db1 = Database.connect() // 1
+var db2 = Database.connect() // 2
+
+print "Active count via getter: " + Database.get_active_count()
+
+// Test Security
+// print Database.active // Should crash (Private)
