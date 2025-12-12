@@ -39,6 +39,7 @@ pub enum Value {
     Class(Rc<ClassData>),
     Instance(Rc<RefCell<InstanceData>>),
     Native(String),
+    Range(i64, i64, i64),
     Null
 }
 
@@ -84,6 +85,7 @@ impl fmt::Display for Value {
                 }
             },
             Value::Native(name) => write!(f, "<Native Fn {}>", name),
+            Value::Range(s, e, step) => write!(f, "{}..{} (step {})", s, e, step),
         }
     }
 }

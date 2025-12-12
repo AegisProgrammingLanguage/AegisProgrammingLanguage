@@ -944,6 +944,16 @@ impl VM {
                     return Err(format!("Classe parente '{}' introuvable au runtime", parent_name));
                 }
             },
+            OpCode::MakeRange => {
+                let end_val = self.pop();
+                let start_val = self.pop();
+                
+                let start = start_val.as_int().unwrap_or(0);
+                let end = end_val.as_int().unwrap_or(0);
+                
+                // Par défaut, le step est 1
+                self.push(Value::Range(start, end, 1));
+            },
         }
 
         Ok(true)
@@ -1174,6 +1184,57 @@ impl VM {
                     Value::List(Rc::new(RefCell::new(vals)))
                 },
                 _ => return Err(format!("Unknown dict method '{}'", method_name).into())
+            },
+
+            Value::Range(start, end, step) => match method_name.as_str() {
+                // Pour que foreach sache combien de tours faire
+                "len" => {
+                    if step == 0 { return Err("Step cannot be zero".into()); }
+                    
+                    // Calcul mathématique du nombre d'éléments
+                    let diff = end - start;
+                    let count = if (diff > 0 && step > 0) || (diff < 0 && step < 0) {
+                        (diff as f64 / step as f64).ceil() as i64
+                    } else {
+                        0
+                    };
+                    Value::Integer(count.max(0))
+                },
+                
+                // Pour que foreach récupère l'élément courant
+                "at" => {
+                    let idx = args[0].as_int().unwrap_or(0);
+                    let val = start + (idx * step);
+                    Value::Integer(val)
+                },
+                
+                // Méthode fluide pour changer le pas : (0..10).step(2)
+                "step" => {
+                    let new_step = args[0].as_int().unwrap_or(1);
+                    if new_step == 0 { return Err("Step cannot be 0".into()); }
+                    Value::Range(start, end, new_step)
+                },
+                
+                // Bonus : Conversion en liste réelle
+                "to_list" => {
+                    let mut list = Vec::new();
+                    let mut current = start;
+                    // Logique simplifiée (attention aux boucles infinies si step est mauvais)
+                    if step > 0 {
+                        while current < end {
+                            list.push(Value::Integer(current));
+                            current += step;
+                        }
+                    } else {
+                        while current > end {
+                            list.push(Value::Integer(current));
+                            current += step;
+                        }
+                    }
+                    Value::List(Rc::new(RefCell::new(list)))
+                },
+                
+                _ => return Err(format!("Unknown range method '{}'", method_name).into())
             },
 
             Value::String(s) => match method_name.as_str() {

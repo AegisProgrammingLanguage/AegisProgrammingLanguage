@@ -28,7 +28,8 @@ pub enum TokenKind {
     Question,
     DoubleQuestion,
     Const,
-    ForEach, In
+    ForEach, In,
+    DotDot
 }
 
 #[derive(Debug, Clone)]
@@ -128,8 +129,14 @@ impl<'a> Lexer<'a> {
                     self.chars.next(); 
                 }
                 '.' => { 
-                    self.add_token(tokens, TokenKind::Dot);
-                    self.chars.next(); 
+                    self.chars.next();
+                    if let Some(&'.') = self.chars.peek() {
+                        self.chars.next();
+                        self.add_token(tokens, TokenKind::DotDot);
+                    }
+                    else {
+                        self.add_token(tokens, TokenKind::Dot);
+                    }
                 }
                 ':' => {
                     self.add_token(tokens, TokenKind::Colon);
@@ -330,7 +337,16 @@ impl<'a> Lexer<'a> {
             if c.is_digit(10) { 
                 s.push(self.chars.next().unwrap()); 
             } 
-            else if c == '.' && !has_dot { 
+            else if c == '.' && !has_dot {
+                let mut lookahead = self.chars.clone();
+                lookahead.next();
+
+                if let Some(&'.') = lookahead.peek() {
+                    // C'est un '..', donc ce n'est pas un nombre à virgule.
+                    // On arrête la lecture du nombre ici (c'est un entier).
+                    break; 
+                }
+
                 has_dot = true; 
                 s.push(self.chars.next().unwrap()); 
             } 

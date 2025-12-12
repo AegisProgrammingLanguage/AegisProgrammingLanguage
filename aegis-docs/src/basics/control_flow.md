@@ -71,6 +71,18 @@ foreach (user in users) {
 }
 ```
 
+### Iterating over Ranges
+
+To repeat an action a specific number of times, use a Range with `..`.
+
+```aegis
+foreach (i in 1..10) {
+    print "Iteration " + i
+}
+```
+
+This is generally preferred over the C-style `for` loop (`for (i, 0, 10, 1)`) because it is cleaner and easier to read.
+
 ### Iterating over Strings
 
 You can also iterate over a string character by character.

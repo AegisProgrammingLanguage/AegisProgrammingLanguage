@@ -674,7 +674,7 @@ impl Parser {
     }
 
     fn parse_bitwise(&mut self) -> Result<Value, String> {
-        let mut left = self.parse_additive()?;
+        let mut left = self.parse_range()?;
         while let TokenKind::BitAnd | TokenKind::BitOr | TokenKind::BitXor | TokenKind::ShiftLeft | TokenKind::ShiftRight = self.peek() {
             let op = match self.advance().kind {
                 TokenKind::BitAnd => "&",
@@ -684,9 +684,24 @@ impl Parser {
                 TokenKind::ShiftRight => ">>",
                 _ => unreachable!()
             };
-            let right = self.parse_additive()?;
+            let right = self.parse_range()?;
             left = json!([op, left, right]);
         }
+        Ok(left)
+    }
+
+    fn parse_range(&mut self) -> Result<Value, String> {
+        // On parse la partie gauche (ex: 1+1)
+        let left = self.parse_additive()?;
+
+        // Si on voit '..', c'est un Range
+        if self.match_token(TokenKind::DotDot) {
+            let right = self.parse_additive()?;
+            let line = self.current_line();
+            // JSON: ["range", line, left, right]
+            return Ok(json!(["range", line, left, right]));
+        }
+
         Ok(left)
     }
 

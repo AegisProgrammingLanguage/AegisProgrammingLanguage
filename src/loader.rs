@@ -163,6 +163,14 @@ pub fn parse_expression(json_expr: &JsonValue) -> Result<Expression, String> {
                     
                     Ok(Expression::SuperCall(method, args))
                 },
+
+                "range" => {
+                    let start = parse_expression(&array[2])?;
+                    let end = parse_expression(&array[3])?;
+                    // On peut créer un OpCode spécifique ou une Expression dédiée.
+                    // Créons une Expression::Range dans ast/mod.rs d'abord si ce n'est pas fait.
+                    Ok(Expression::Range(Box::new(start), Box::new(end)))
+                },
                 // -----------------------------------------------------
 
                 // Fallback (pour les expressions génériques)

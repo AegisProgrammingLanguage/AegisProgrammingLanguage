@@ -59,6 +59,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         
         OpCode::Class => constant_instruction("CLASS", chunk, offset),
         OpCode::MakeEnum => byte_instruction("ENUM", chunk, offset),
+        OpCode::MakeRange => simple_instruction("MAKE_RANGE", offset),
         OpCode::Method => constant_instruction("METHOD", chunk, offset),
         OpCode::GetAttr => constant_instruction("GET_ATTR", chunk, offset),
         OpCode::SetAttr => constant_instruction("SET_ATTR", chunk, offset),

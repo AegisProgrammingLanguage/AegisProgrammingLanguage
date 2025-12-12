@@ -53,6 +53,7 @@ pub enum Expression {
     List(Vec<Expression>),
     Dict(Vec<(String, Expression)>),
     SuperCall(String, Vec<Expression>),
+    Range(Box<Expression>, Box<Expression>)
 }
 
 #[derive(Debug, Clone, PartialEq)]

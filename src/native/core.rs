@@ -70,6 +70,7 @@ fn type_of(args: Vec<Value>) -> Result<Value, String> {
         Value::List(_) => "list".to_string(),
         Value::Dict(_) => "dict".to_string(),
         Value::Enum(_) => "enum".to_string(),
+        Value::Range(_, _, _) => "range".to_string(),
                                     
         Value::Function(..) => "function".to_string(),
         Value::Class { .. } => "class".to_string(),

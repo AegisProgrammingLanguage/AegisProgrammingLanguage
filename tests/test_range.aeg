@@ -1,0 +1,20 @@
+print "--- TEST RANGE & FOREACH ---"
+
+print "1. Boucle simple 0..5"
+foreach (i in 0..5) {
+    print i
+}
+
+print "\n2. Boucle avec step (0..10).step(2)"
+foreach (i in (0..10).step(2)) {
+    print "Pair: " + i
+}
+
+print "\n3. Boucle negative (10..0).step(-1)"
+foreach (i in (10..0).step(-1)) {
+    print "Countdown: " + i
+}
+
+print "\n4. Conversion en liste"
+var r = 1..4
+print r.to_list() // [1, 2, 3]

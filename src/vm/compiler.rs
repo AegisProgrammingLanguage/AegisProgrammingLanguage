@@ -440,6 +440,11 @@ impl Compiler {
 
                 self.emit_op(OpCode::MakeClosure);
             },
+            Expression::Range(start, end) => {
+                self.compile_expression(*start);
+                self.compile_expression(*end);
+                self.emit_op(OpCode::MakeRange);
+            },
         }
     }
 
