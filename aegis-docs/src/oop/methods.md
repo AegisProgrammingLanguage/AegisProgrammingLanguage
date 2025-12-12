@@ -1,44 +1,40 @@
-# Methods &amp; this
+# Methods & this
 
 Methods are functions defined inside a class. They define what an object can *do*.
 
 ## Defining Methods
 
-Inside a class block, define functions as usual. You typically define an `init` method to setup properties, and then other methods to manipulate them.
+Methods can have visibility modifiers (`public`, `private`, `protected`). If omitted, they are `public` by default.
 
 ```aegis
 class Rectangle {
+    // Public fields
+    public width = 0
+    public height = 0
     
     init(width, height) {
         this.width = width
         this.height = height
     }
     
+    // Public method
     func area() {
         return this.width * this.height
     }
     
-    func scale(factor) {
-        this.width = this.width * factor
-        this.height = this.height * factor
+    // Private method (internal helper)
+    private check_validity() {
+        if (this.width < 0) throw "Invalid width"
     }
 }
 ```
 
 ## The this Keyword
 
-Inside a method, the special variable `this` refers to the current instance calling the method. It allows you to access or modify the object's properties.
-
-*Important: To access a property inside a class, you must use `this.property`. Using just property would look for a local variable.*
-
-Usage Example
+Inside a method, the special variable `this` refers to the current instance. It allows you to access or modify the object's fields and call other methods.
 
 ```aegis
 var rect = new Rectangle(10, 20)
 
 print "Area: " + rect.area() // 200
-
-rect.scale(2)
-print "New Width: " + rect.width // 20
-print "New Area: " + rect.area() // 800
 ```

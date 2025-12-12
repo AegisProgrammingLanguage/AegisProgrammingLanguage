@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::ast::value::{ClassData, FunctionData};
+use crate::ast::value::{ClassData, FunctionData, Visibility};
 use crate::ast::{InstanceData, Value};
 use crate::chunk::Chunk;
 use crate::opcode::OpCode;
@@ -21,6 +21,7 @@ struct CallFrame {
     closure: Value,       // Le code de la fonction
     ip: usize,          // Où on en est dans CETTE fonction
     slot_offset: usize, // Où commencent ses variables locales dans la pile globale (Base Pointer)
+    class_context: Option<Rc<ClassData>>, // La classe dans laquelle on s'exécute (pour private/protected)
 }
 
 impl CallFrame {
@@ -63,6 +64,7 @@ impl VM {
             closure: main_func, // Utilise la closure
             ip: 0,
             slot_offset: 0,
+            class_context: None
         };
 
         let mut vm = VM {
@@ -193,7 +195,7 @@ impl VM {
     // --- NOUVEAU : Helper pour MAP/FILTER ---
     // Cette fonction exécute une fonction Aegis (callback) de façon synchrone
     // C'est une "mini-vm" à l'intérieur de l'instruction
-    fn run_callable_sync(&mut self, callable: Value, args: Vec<Value>) -> Result<Value, String> {
+    fn run_callable_sync(&mut self, callable: Value, args: Vec<Value>, context: Option<Rc<ClassData>>) -> Result<Value, String> {
         // 1. On empile la fonction et les arguments comme un appel normal
         self.push(callable.clone());
         for arg in args.iter() {
@@ -202,7 +204,7 @@ impl VM {
 
         // 2. On prépare la Frame (comme OpCode::Call)
         // Note: call_value empile la nouvelle frame
-        self.call_value(callable, args.len())?;
+        self.call_value(callable, args.len(), context)?;
 
         // 3. On note la profondeur actuelle de la pile de frames
         let start_depth = self.frames.len();
@@ -249,7 +251,7 @@ impl VM {
                     self.stack.get_unchecked(func_idx).clone() 
                 };
                 
-                self.call_value(target, arg_count)?;
+                self.call_value(target, arg_count, None)?;
             },
             OpCode::Print => {
                 let val = self.pop();
@@ -581,6 +583,9 @@ impl VM {
 
                 match obj {
                     Value::Instance(inst) => {
+                        let class_rc = inst.borrow().class.clone();
+                        self.check_access(&class_rc, &attr_name)?;
+
                         let val = inst
                             .borrow()
                             .fields
@@ -617,6 +622,8 @@ impl VM {
 
                 match obj {
                     Value::Instance(inst) => {
+                        let class_rc = inst.borrow().class.clone();
+                        self.check_access(&class_rc, &attr_name)?;
                         inst.borrow_mut().fields.insert(attr_name, val.clone());
                         self.push(val); // L'expression d'assignation retourne la valeur
                     }
@@ -888,7 +895,7 @@ impl VM {
                     
                     // Run the module synchronously.
                     // Its instructions (SET_GLOBAL) will write directly to 'self.globals'.
-                    let module_result = self.run_callable_sync(module_func, vec![])?;
+                    let module_result = self.run_callable_sync(module_func, vec![], None)?;
 
                     // 6. UPDATE CACHE
                     self.modules.insert(path.clone(), Value::Boolean(true));
@@ -957,9 +964,10 @@ impl VM {
                         // current_class_rc est maintenant bien un Rc<ClassData>
                         // On a donc accès à .methods et .parent_ref
                         if let Some(method_val) = current_class_rc.methods.get(&method_name) {
+                            self.check_access(&current_class_rc, &method_name)?;
                             self.stack[obj_idx] = method_val.clone();
                             self.stack.insert(obj_idx + 1, obj.clone());
-                            self.call_value(method_val.clone(), arg_count + 1)?;
+                            self.call_value(method_val.clone(), arg_count + 1, Some(current_class_rc.clone()))?;
                             return Ok(true);
                         }
 
@@ -1013,9 +1021,14 @@ impl VM {
             loop {
                 // A. Méthode présente ?
                 if let Some(method_val) = current_class_rc.methods.get(&method_name) {
+                    self.check_access(&current_class_rc, &method_name)?;
                     self.stack[obj_idx] = method_val.clone();
                     self.stack.insert(obj_idx + 1, obj.clone()); 
-                    self.call_value(method_val.clone(), arg_count + 1)?; 
+                    self.call_value(
+                        method_val.clone(), 
+                        arg_count + 1, 
+                        Some(current_class_rc.clone())
+                    )?; 
                     return Ok(()); 
                 }
                 
@@ -1045,7 +1058,7 @@ impl VM {
                     // Note : Contrairement aux Instances, on n'injecte PAS 'this'.
                     // Les fonctions de namespace sont considérées comme statiques.
                     
-                    self.call_value(val, arg_count)?;
+                    self.call_value(val, arg_count, None)?;
                     return Ok(()); // L'appel est géré, on rend la main à la boucle principale
                 }
             }
@@ -1107,7 +1120,7 @@ impl VM {
 
                     for item in list_data {
                         // Le callback prend (acc, item) et retourne le nouvel acc
-                        accumulator = self.run_callable_sync(callback.clone(), vec![accumulator, item])?;
+                        accumulator = self.run_callable_sync(callback.clone(), vec![accumulator, item], None)?;
                     }
                     
                     accumulator
@@ -1137,7 +1150,7 @@ impl VM {
                     let mut found_item = Value::Null;
                     
                     for item in list_data {
-                        let res = self.run_callable_sync(callback.clone(), vec![item.clone()])?;
+                        let res = self.run_callable_sync(callback.clone(), vec![item.clone()], None)?;
                         
                         let is_found = match res {
                             Value::Boolean(b) => b,
@@ -1175,7 +1188,7 @@ impl VM {
                             if sort_error.is_some() { return std::cmp::Ordering::Equal; }
                             
                             // Appel Synchrone de la VM : on exécute la fonction Aegis
-                            match self.run_callable_sync(comp_fn.clone(), vec![a.clone(), b.clone()]) {
+                            match self.run_callable_sync(comp_fn.clone(), vec![a.clone(), b.clone()], None) {
                                 Ok(res) => {
                                     // La convention standard : négatif = Less, positif = Greater, 0 = Equal
                                     // On essaie de convertir en entier, sinon en float
@@ -1252,7 +1265,7 @@ impl VM {
 
                     for item in list_data {
                         // On appelle la VM récursivement pour chaque élément !
-                        let res = self.run_callable_sync(callback.clone(), vec![item])?;
+                        let res = self.run_callable_sync(callback.clone(), vec![item], None)?;
                         new_list.push(res);
                     }
                     Value::List(Rc::new(RefCell::new(new_list)))
@@ -1264,7 +1277,7 @@ impl VM {
                     let mut new_list = Vec::new();
 
                     for item in list_data {
-                        let res = self.run_callable_sync(callback.clone(), vec![item.clone()])?;
+                        let res = self.run_callable_sync(callback.clone(), vec![item.clone()], None)?;
                         // On garde si le résultat est "truthy"
                         if matches!(res, Value::Boolean(true)) || (res.as_int().unwrap_or(0) != 0 && !matches!(res, Value::Null)) {
                             new_list.push(item);
@@ -1279,7 +1292,7 @@ impl VM {
                     
                     for item in list_data {
                         // On exécute juste pour l'effet de bord, on ignore le résultat
-                        self.run_callable_sync(callback.clone(), vec![item])?;
+                        self.run_callable_sync(callback.clone(), vec![item], None)?;
                     }
                     Value::Null
                 },
@@ -1499,7 +1512,7 @@ impl VM {
         ((frame.chunk().code[ip] as u16) << 8) | frame.chunk().code[ip + 1] as u16
     }
 
-    fn call_value(&mut self, target: Value, arg_count: usize) -> Result<(), String> {
+    fn call_value(&mut self, target: Value, arg_count: usize, context: Option<Rc<ClassData>>) -> Result<(), String> {
         let func_idx = self.stack.len() - 1 - arg_count;
 
         match &target {
@@ -1511,9 +1524,10 @@ impl VM {
                  }
                  
                  let frame = CallFrame {
-                     closure: target.clone(), // Clone le Rc (rapide !)
-                     ip: 0,
-                     slot_offset: func_idx + 1,
+                    closure: target.clone(), // Clone le Rc (rapide !)
+                    ip: 0,
+                    slot_offset: func_idx + 1,
+                    class_context: context
                  };
                  
                  self.frames.push(frame);
@@ -1553,7 +1567,11 @@ impl VM {
                         if let Value::Function(init_func) = init_val_or_func {
                             // Appel synchrone de la fonction d'initialisation (sans arguments)
                             // Elle retourne la valeur par défaut (ex: 100)
-                            match self.run_callable_sync(Value::Function(init_func.clone()), vec![]) {
+                            match self.run_callable_sync(
+                                Value::Function(init_func.clone()), 
+                                vec![], 
+                                Some(class_def.clone())
+                            ) {
                                 Ok(val) => {
                                     // On insère dans l'instance
                                     instance_rc.borrow_mut().fields.insert(field_name.clone(), val);
@@ -1592,7 +1610,7 @@ impl VM {
                     let mut call_args = vec![instance.clone()];
                     call_args.extend(args);
 
-                    self.run_callable_sync(method_val, call_args)?;
+                    self.run_callable_sync(method_val, call_args, Some(rc_class.clone()))?;
                 } else {
                     if arg_count > 0 {
                         return Err(format!("Classe '{}' n'a pas de constructeur 'init'", rc_class.name));
@@ -1668,6 +1686,7 @@ impl VM {
             closure: script_func,
             ip: 0,
             slot_offset: 0,
+            class_context: None,
         };
 
         // On l'ajoute à la pile d'appels
@@ -1698,5 +1717,55 @@ impl VM {
         let global_id = self.global_names.borrow().get(name).cloned()?;
         let val = self.globals.get(global_id as usize)?;
         if matches!(val, Value::Null) { None } else { Some(val.clone()) }
+    }
+
+    fn check_access(&mut self, target_class: &Rc<ClassData>, member_name: &str) -> Result<(), String> {
+        // 1. Récupérer la visibilité (Public par défaut)
+        let visibility = target_class.visibilities.get(member_name).unwrap_or(&Visibility::Public);
+
+        if matches!(visibility, Visibility::Public) {
+            return Ok(());
+        }
+
+        // 2. Qui appelle ?
+        let current_context = &self.current_frame().class_context;
+
+        // Si on n'est pas dans une classe, on n'a accès qu'au public
+        let ctx = match current_context {
+            Some(c) => c,
+            None => return Err(format!("Accès refusé : '{}' est {:?} (Appel hors classe)", member_name, visibility)),
+        };
+
+        match visibility {
+            Visibility::Public => Ok(()), // Déjà géré mais au cas où
+            
+            Visibility::Private => {
+                // Règle : Seule la classe elle-même a accès (Identity Check)
+                if Rc::ptr_eq(ctx, target_class) {
+                    Ok(())
+                } else {
+                    Err(format!("Accès refusé : '{}' est privé à la classe '{}'", member_name, target_class.name))
+                }
+            },
+            
+            Visibility::Protected => {
+                // Règle : La classe elle-même OU ses enfants ont accès.
+                
+                // A. Même classe ?
+                if Rc::ptr_eq(ctx, target_class) { return Ok(()); }
+
+                // B. Est-ce que 'ctx' (l'appelant) hérite de 'target_class' (le propriétaire) ?
+                // On remonte la chaîne des parents de l'appelant
+                let mut curr = Some(ctx.clone());
+                while let Some(c) = curr {
+                    if Rc::ptr_eq(&c, target_class) {
+                        return Ok(());
+                    }
+                    curr = c.parent_ref.clone();
+                }
+                
+                Err(format!("Accès refusé : '{}' est protégé dans '{}'", member_name, target_class.name))
+            }
+        }
     }
 }

@@ -1,88 +1,96 @@
 # Classes &amp; Instances
 
-Object-Oriented Programming allows you to structure your code by bundling data (attributes) and behavior (methods) into reusable blueprints called **Classes**.
+Object-Oriented Programming in Aegis allows you to structure your code by bundling data and behavior into reusable blueprints called **Classes**.
 
 ## Defining a Class
 
 Use the `class` keyword followed by the class name and a block `{ ... }`.
 
-Unlike the previous version, Aegis v0.2.1 uses an explicit **Initializer method** named `init`. This method is automatically called when you create a new instance.
+Aegis now supports **Declared Fields** and **Visibility Modifiers**. You define your data structure at the top of the class.
 
 ```aegis
 class User {
-    // The initializer (Constructor)
+    // 1. Field Declaration
+    public name
+    private email
+    protected role = "Guest" // Default value
+    
+    // 2. Initializer (Constructor)
     init(name, email) {
-        // Assign parameters to the instance fields using 'this'
         this.name = name
         this.email = email
-        this.active = true
-        
-        print "Creating user: " + this.name
+        print "User created: " + this.name
     }
     
-    // Other methods...
+    // 3. Methods
+    public get_info() {
+        return this.name + " (" + this.role + ")"
+    }
 }
 ```
 
-## Creating Instances
+## Visibility & Encapsulation
 
-To create an object (an instance of a class), use the `new` keyword. You pass the arguments expected by your `init` method here.
+Aegis enforces strict encapsulation. There are three visibility modifiers available for both fields and methods:
 
-```aegis
-var admin = new User("Alice", "alice@example.com")
-var guest = new User("Bob", "bob@example.com")
-```
 
-## Fields (Attributes)
-
-Aegis objects are dynamic. You typically define your fields inside `init`, but you can access, modify, or add new fields at any time using the dot notation.
-
-```aegis
-print admin.name // "Alice"
-
-// Modifying a field
-admin.name = "SuperAlice"
-
-// Adding a new field dynamically
-admin.role = "Administrator"
-print admin.role // "Administrator"
-```
-
-## Checking Types and Inheritance
-
-To verify if an object is an instance of a specific class, avoid comparing type names with strings. Instead, use the robust global function `is_instance()`.
-
-### `is_instance(object, class)`
-
-Returns `true` if the object is an instance of the class **or** if it inherits from it.
+| Keyword | Scope | Description |
+|--- |--- |--- |
+| public | Global | Accessible from anywhere. This is the default if no modifier is used. |
+| protected | Hierarchy | Accessible only within the class and its subclasses. |
+| private | Internal | Accessible only within the class itself. Strictly internal. |
 
 ### Example
 
 ```aegis
-class Animal {}
-class Dog extends Animal {}
+class BankAccount {
+    private balance = 0
+    public currency = "EUR"
 
-var dog = new Dog()
+    init(start_amount) {
+        if (start_amount > 0) {
+            this.balance = start_amount
+        }
+    }
 
-// Direct class check
-print is_instance(dog, Dog)    // true
+    public deposit(amount) {
+        this.balance += amount
+        this.log_transaction()
+    }
 
-// Inheritance check (Polymorphism)
-print is_instance(dog, Animal) // true
+    // Private method: Internal use only
+    private log_transaction() {
+        print "Transaction logged."
+    }
+}
 
-// Unrelated check
-print is_instance(dog, String) // false
+var acc = new BankAccount(100)
+
+// ✅ Public access allowed
+print acc.currency 
+acc.deposit(50)
+
+// ❌ Error: Access denied ('balance' is private)
+// print acc.balance 
+
+// ❌ Error: Access denied ('log_transaction' is private)
+// acc.log_transaction()
 ```
 
-### Why use is_instance?
+## Creating Instances
 
-Unlike checking `type_of(obj) == "Dog"`, `is_instance` checks the actual structure in memory.
-- **Supports Inheritance**: It returns true `for` parent classes.
-- **Safety**: It works even if variables are renamed or aliases are used.
+To create an object, use the `new` keyword. This allocates memory, initializes fields with their default values, and then calls the `init` method.
 
 ```aegis
-var Pet = Dog
-var my_pet = new Pet()
+var admin = new User("Alice", "alice@aegis.lang")
+```
 
-print is_instance(my_pet, Dog) // true
+## Type Checking
+
+To verify if an object is an instance of a specific class, use the global function `is_instance()`.
+
+```aegis
+if (is_instance(admin, User)) {
+    print "This is a user."
+}
 ```

@@ -2,17 +2,16 @@
 
 Aegis promotes flexible design patterns. While inheritance creates rigid hierarchies ("is-a" relationship), **Composition** allows you to build complex objects by combining simpler ones ("has-a" relationship).
 
-## Concept
-
-Instead of a class inheriting from another, it holds an instance of another class as a property.
-
 ## Example: Game Entity
 
-Imagine building a game. Instead of a deep inheritance tree, you can compose an `Entity` using a `Position` and a `Stats` object.
+Instead of a deep inheritance tree, you can compose an `Player` using a `Vector` and a `Stats` object.
 
 ```aegis
 // Component 1: Position
 class Vector {
+    public x = 0
+    public y = 0
+
     init(x, y) {
         this.x = x
         this.y = y
@@ -23,16 +22,21 @@ class Vector {
 
 // Component 2: Stats
 class Stats {
+    public hp = 100
+    public mana = 50
+
     init(hp, mana) {
         this.hp = hp
         this.mana = mana
     }
-
-    func is_alive() { return this.hp > 0 }
 }
 
 // Main Entity using Composition
 class Player {
+    public name
+    public pos
+    public stats
+
     init(name, x, y) {
         this.name = name
         
@@ -44,22 +48,12 @@ class Player {
     func info() {
         print this.name + " is at " + this.pos.str()
     }
-    
-    func take_damage(amount) {
-        this.stats.hp = this.stats.hp - amount
-    }
 }
 ```
 
-Usage
+Usage:
 
-```
+```aegis
 var p = new Player("Hero", 10, 10)
-
 p.info() // Hero is at (10, 10)
-
-p.take_damage(20)
-print "HP Left: " + p.stats.hp // 80
 ```
-
-This approach makes your code modular and easier to test.

@@ -66,3 +66,5 @@ print cw.get_info()
 // Attendu : "Satoshi has 0 BTC" (Currency surchargé à BTC)
 
 cw.check_access()
+
+// cw.log_transaction()

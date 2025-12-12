@@ -1,52 +1,43 @@
 # Inheritance
 
-Inheritance is a fundamental concept in Object-Oriented Programming that allows a class (the **Child**) to derive behavior and properties from another class (the **Parent**).
+Inheritance allows a class (the **Child**) to derive behavior and properties from another class (the **Parent**).
 
 In Aegis, inheritance is achieved using the `extends` keyword.
 
-
-
 ## Basic Inheritance
 
-When a class extends another, it automatically gains access to all methods defined in the parent class. This includes the `init` method if the child does not define its own.
+Child classes inherit `public` and `protected` members from the parent. `private` members remain inaccessible to the child.
 
 ```aegis
 // The Parent Class
 class Animal {
+    protected name // 'protected' allows children to access this field
+
     init(name) {
         this.name = name
     }
 
-    speak() {
-        print this.name + " makes a generic noise."
-    }
-    
-    sleep() {
-        print this.name + " is sleeping."
+    public speak() {
+        print this.name + " makes a noise."
     }
 }
 
 // The Child Class
 class Dog extends Animal {
-    // Dog inherits 'init', 'speak', and 'sleep' from Animal
-    
-    fetch() {
+    public fetch() {
+        // Can access 'this.name' because it is protected in Animal
         print this.name + " runs after the ball!"
     }
 }
 
-// 'new' calls Animal.init because Dog doesn't override it
 var d = new Dog("Rex")
-
-d.fetch() // "Rex runs after the ball!" (Defined in Dog)
-d.speak() // "Rex makes a generic noise." (Inherited from Animal)
+d.fetch() // "Rex runs after the ball!"
+d.speak() // "Rex makes a noise." (Inherited)
 ```
 
 ## Method Overriding
 
-A child class can provide its own implementation of a method that already exists in the parent class. This is called Overriding.
-
-When you call a method, Aegis looks for it in the current class first. If found, it executes it. If not, it looks in the parent class.
+A child class can provide its own implementation of a method.
 
 ```aegis
 class Cat extends Animal {
@@ -57,96 +48,37 @@ class Cat extends Animal {
 }
 
 var c = new Cat("Luna")
-c.speak() // "Meow!" (The parent's method is ignored)
-c.sleep() // "Luna is sleeping." (Still uses the parent's method)
+c.speak() // "Meow!"
 ```
 
-## The Prototype Chain
+## Accessing Parent Methods
 
-Aegis supports multi-level inheritance. A class can inherit from a class that inherits from another class.
-
-```aegis
-class LivingBeing { 
-    init(age) { this.age = age }
-    is_alive() { return true } 
-}
-
-class Animal extends LivingBeing { 
-    init(name, age) {
-        super.init(age)
-        this.name = name
-    }
-}
-
-class Dog extends Animal { 
-    init(name, age, breed) {
-        super.init(name, age)
-        this.breed = breed
-    }
-}
-
-var d = new Dog("Buddy", 5, "Golden")
-
-// Dog -> Animal -> LivingBeing -> Found!
-print d.is_alive() // true
-```
-
-*Note: Currently, Aegis supports Single Inheritance (a class can only extend one parent).*
-
-## Accessing Parent Methods (`super`)
-
-When you override a method, you often want to **extend** the parent's behavior rather than replacing it entirely. You can explicitly call a method from the parent class using the `super` keyword.
-
-### Syntax
-
-To call a method from the parent class inside a child class method:
+Use `super` to call a method from the parent class. This is essential in the `init` method to ensure the parent is correctly initialized.
 
 ```aegis
-super.methodName(arguments)
-```
-
-### Example
-
-In this example, the `Hero` class overrides `init` but still calls `Entity`'s `init` to ensure the base setup is done.
-
-```aegis
-class Entity {
-    init(name) {
-        this.name = name
-        print "Entity initialized: " + this.name
-    }
-    
-    speak() {
-        return "..."
-    }
-}
-
 class Hero extends Entity {
     init(name, hp) {
-        // 1. Call the parent method first
+        // 1. Call the parent constructor first
         super.init(name)
         
         // 2. Add child-specific logic
         this.hp = hp
-        print "Hero ready with " + this.hp + " HP"
     }
     
     speak() {
-        // Reuse parent result in the new string
-        return "Hero says: " + super.speak() + " (Ready!)"
+        return "Hero says: " + super.speak()
     }
 }
-
-var h = new Hero("Link", 100)
-print h.speak()
 ```
 
-Output:
+## Polymorphism & Type Checking
 
-```
-Entity initialized: Link
-Hero ready with 100 HP
-Hero says: ... (Ready!)
-```
+`is_instance` checks the entire inheritance chain.
 
-This pattern is essential for avoiding code duplication when building complex class hierarchies.
+```aegis
+var d = new Dog("Buddy")
+
+print is_instance(d, Dog)    // true
+print is_instance(d, Animal) // true (Dog is an Animal)
+print is_instance(d, String) // false
+```
