@@ -12,6 +12,7 @@
 - [Language Basics](basics/README.md)
     - [Variables & Data Types](basics/variables.md)
     - [Gradual Typing](basics/typing.md)
+    - [Built-in Functions](basics/builtins.md)
     - [Enums](basics/enums.md)
     - [Control Flow](basics/control_flow.md)
     - [Comments](basics/comments.md)
