@@ -1,17 +1,31 @@
 use std::fs::{self, File};
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use walkdir::WalkDir;
 use serde::Deserialize;
 use reqwest::blocking::{Client, multipart};
-use std::env; // To detect OS/Arch
+use std::env;
 
-const REGISTRY_URL: &str = "http://127.0.0.1:8000/api";
+// Import toml_edit for safe TOML manipulation
+use toml_edit::{DocumentMut, value, Item, Table};
+
+const REGISTRY_URL: &str = "https://aegis.foxvoid.com/api";
+
+#[derive(Deserialize)]
+struct CargoPackage {
+    name: String,
+}
+
+#[derive(Deserialize)]
+struct CargoManifest {
+    package: CargoPackage,
+}
 
 #[derive(Deserialize, Debug)]
 struct PackageInfo {
     version: String,
-    url: String, // The registry returns the URL for the specific asset (binary or source)
+    url: String, 
 }
 
 #[derive(Deserialize)]
@@ -23,6 +37,7 @@ struct Manifest {
 struct ProjectInfo {
     name: String,
     version: String,
+    exclude: Option<Vec<String>>,
 }
 
 // --- UTILS ---
@@ -33,21 +48,23 @@ fn get_credentials_path() -> PathBuf {
 
 fn get_token() -> Result<String, String> {
     let path = get_credentials_path();
-    fs::read_to_string(&path).map_err(|_| "Not logged in. Run 'aegis login <token>'".to_string())
+    let content = fs::read_to_string(&path)
+        .map_err(|_| "Non connecté. Faites 'aegis login <token>'".to_string())?;
+    
+    Ok(content.trim().to_string()) 
 }
 
-// Detects the current system information to match Django choices
 fn get_system_info() -> (String, String) {
     let os = match env::consts::OS {
         "linux" => "linux",
         "macos" => "macos", 
         "windows" => "windows",
-        _ => "any", // Fallback
+        _ => "any", 
     };
 
     let arch = match env::consts::ARCH {
         "x86_64" => "x86_64",
-        "aarch64" => "arm64", // Rust uses aarch64, Django choices use arm64
+        "aarch64" => "arm64", 
         _ => "any",
     };
 
@@ -59,7 +76,6 @@ fn find_library_in_dir(dir: &Path) -> Option<PathBuf> {
         for entry in entries.flatten() {
             let path = entry.path();
             if let Some(ext) = path.extension() {
-                // We prioritize specific libs, but this logic assumes only one lib per package
                 if ext == "dll" || ext == "so" || ext == "dylib" {
                     return Some(path);
                 }
@@ -69,38 +85,89 @@ fn find_library_in_dir(dir: &Path) -> Option<PathBuf> {
     None
 }
 
+// --- UPDATED FUNCTION USING TOML_EDIT ---
 fn update_toml_dependency(name: &str, _path: &str) -> Result<(), String> {
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open("aegis.toml")
-        .map_err(|e| e.to_string())?;
+    let toml_path = "aegis.toml";
+    
+    // 1. Read existing content or create empty if missing
+    let content = fs::read_to_string(toml_path).unwrap_or_default();
+    
+    // 2. Parse into a mutable Document (preserves comments and formatting)
+    let mut doc = content.parse::<DocumentMut>()
+        .map_err(|e| format!("Failed to parse aegis.toml: {}", e))?;
 
-    writeln!(file, "{} = \"*\"", name).map_err(|e| e.to_string())?;
+    // 3. Ensure [dependencies] table exists
+    // as_table_mut returns None if the key doesn't exist or isn't a table
+    if doc.get("dependencies").is_none() {
+        // We insert a standard table (with [brackets]), not an inline table
+        doc["dependencies"] = Item::Table(Table::new());
+    }
+
+    // 4. Add or update the dependency
+    // We strictly use `doc["dependencies"]` now that we know it exists/is created
+    doc["dependencies"][name] = value("*");
+
+    // 5. Write back to file
+    fs::write(toml_path, doc.to_string()).map_err(|e| e.to_string())?;
+    
     Ok(())
 }
 
-fn create_zip_of_directory(src_dir: &Path, dst_file: &Path) -> Result<(), String> {
+fn create_zip_of_directory(src_dir: &Path, dst_file: &Path, excludes: &[String]) -> Result<(), String> {
     let file = File::create(dst_file).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
     let options = zip::write::FileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o755)
+        .large_file(true);
+
+    // On récupère le nom du fichier zip de destination pour l'exclure sûrement
+    let dst_filename = dst_file.file_name().unwrap().to_string_lossy();
 
     for entry in WalkDir::new(src_dir).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
+        let path_str = path.to_string_lossy();
+
+        // 1. Exclusions Système Robustes
+        // On exclut le fichier zip LUI-MÊME par son nom, peu importe le chemin ./
+        if let Some(name) = path.file_name() {
+            if name.to_string_lossy() == dst_filename {
+                continue;
+            }
+        }
         
-        // Ignore git, target, and the zip itself
-        if path.to_string_lossy().contains("target") 
-           || path.to_string_lossy().contains(".git") 
-           || path == dst_file {
+        if path_str.contains("target") || path_str.contains(".git") {
+            continue;
+        }
+        
+        // Sécurité supplémentaire : on évite d'inclure le dossier 'packages'
+        // car on ne veut pas republier nos dépendances installées.
+        if path.starts_with("./packages") || path.starts_with("packages") {
             continue;
         }
 
+        // 2. Exclusions Utilisateur (aegis.toml)
+        if let Ok(relative) = path.strip_prefix(src_dir) {
+            let relative_str = relative.to_string_lossy();
+            let mut is_excluded = false;
+
+            for pattern in excludes {
+                if relative_str.starts_with(pattern) || relative_str == *pattern {
+                    is_excluded = true;
+                    break;
+                }
+            }
+
+            if is_excluded {
+                continue;
+            }
+        }
+
         if path.is_file() {
-            // Calculate relative path for zip structure
             let name = path.strip_prefix(src_dir).unwrap();
-            let name_str = name.to_str().unwrap().replace("\\", "/"); // Windows fix
+            let name_str = name.to_str().unwrap().replace("\\", "/");
             
+            println!("   📦 Zipping: {}", name_str); // Debug visuel utile
             zip.start_file(name_str, options).map_err(|e| e.to_string())?;
             let mut f = File::open(path).map_err(|e| e.to_string())?;
             io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
@@ -108,6 +175,54 @@ fn create_zip_of_directory(src_dir: &Path, dst_file: &Path) -> Result<(), String
     }
     zip.finish().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn build_native_package(aegis_project_name: &str) -> Result<String, String> {
+    println!("⚙️  Compiling native code (Cargo)...");
+
+    let cargo_content = fs::read_to_string("Cargo.toml")
+        .map_err(|_| "Cargo.toml not found. Is this a Rust project?".to_string())?;
+    
+    let cargo_manifest: CargoManifest = toml::from_str(&cargo_content)
+        .map_err(|e| format!("Failed to parse Cargo.toml: {}", e))?;
+    
+    let cargo_name = cargo_manifest.package.name; 
+
+    let status = Command::new("cargo")
+        .args(["build", "--release"])
+        .status()
+        .map_err(|_| "Failed to run cargo. Is it installed?")?;
+
+    if !status.success() {
+        return Err("Cargo compilation failed.".to_string());
+    }
+
+    let clean_cargo_name = cargo_name.replace("-", "_");
+    let clean_aegis_name = aegis_project_name.replace("-", "_");
+    
+    let (prefix, suffix) = if cfg!(target_os = "windows") {
+        ("", ".dll")
+    } else if cfg!(target_os = "macos") {
+        ("lib", ".dylib")
+    } else {
+        ("lib", ".so") 
+    };
+
+    let src_filename = format!("{}{}{}", prefix, clean_cargo_name, suffix);
+    let src_path = Path::new("target").join("release").join(&src_filename);
+
+    let dst_filename = format!("{}{}{}", prefix, clean_aegis_name, suffix);
+    let dst_path = Path::new(&dst_filename);
+
+    if !src_path.exists() {
+        return Err(format!("Compiled file not found at: {:?}", src_path));
+    }
+
+    fs::copy(&src_path, dst_path).map_err(|e| format!("Failed to copy binary: {}", e))?;
+
+    println!("✅ Binary generated and renamed: {} -> {}", src_filename, dst_filename);
+    
+    Ok(dst_filename)
 }
 
 // --- PUBLIC COMMANDS ---
@@ -123,12 +238,8 @@ pub fn login(token: &str) -> Result<(), String> {
 }
 
 pub fn install(name: &str, _version: Option<String>) -> Result<(), String> {
-    // 1. Detect OS & Arch
     let (os, arch) = get_system_info();
     
-    // 2. Query API with platform info
-    // The Django view should use these params to return the correct file URL in the JSON
-    // e.g., if on Linux, return URL for linux-x86_64.zip. If not found, return source.zip.
     let url = format!("{}/packages/{}/latest/?os={}&architecture={}", REGISTRY_URL, name, os, arch);
     println!("🔍 Searching for {} ({}/{})...", name, os, arch);
 
@@ -142,11 +253,9 @@ pub fn install(name: &str, _version: Option<String>) -> Result<(), String> {
     let info: PackageInfo = resp.json().map_err(|e| format!("JSON Error: {}", e))?;
     println!("⬇️  Downloading version {}...", info.version);
 
-    // 3. Download the asset
     let zip_resp = client.get(&info.url).send().map_err(|e| e.to_string())?;
     let zip_bytes = zip_resp.bytes().map_err(|e| e.to_string())?;
 
-    // 4. Unzip
     let packages_dir = Path::new("packages").join(name);
     if packages_dir.exists() {
         fs::remove_dir_all(&packages_dir).map_err(|e| e.to_string())?;
@@ -158,7 +267,6 @@ pub fn install(name: &str, _version: Option<String>) -> Result<(), String> {
 
     for i in 0..zip.len() {
         let mut file = zip.by_index(i).unwrap();
-        // Security check needed here against ZipSlip vulnerability in production
         let outpath = packages_dir.join(file.mangled_name());
 
         if file.name().ends_with('/') {
@@ -172,15 +280,10 @@ pub fn install(name: &str, _version: Option<String>) -> Result<(), String> {
         }
     }
 
-    // 5. Update toml logic
-    // If it's a binary package (contains .so/.dll), use that.
-    // If it's a source package (contains .aeg), allow standard import.
     if let Some(lib_path) = find_library_in_dir(&packages_dir) {
-        // It's a native module
         update_toml_dependency(name, lib_path.to_str().unwrap())?;
         println!("✅ Native package {} installed successfully!", name);
     } else {
-        // It's likely a pure Aegis source package
         update_toml_dependency(name, "")?;
         println!("✅ Source package {} installed successfully!", name);
     }
@@ -188,16 +291,23 @@ pub fn install(name: &str, _version: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
-// Updated publish signature to accept platform flags
-// Usage: aegis publish --os linux --arch x86_64 (for binary)
-// Usage: aegis publish (defaults to source/any)
-pub fn publish(target_os: Option<String>, target_arch: Option<String>) -> Result<(), String> {
+pub fn publish(mut target_os: Option<String>, mut target_arch: Option<String>) -> Result<(), String> {
     let content = fs::read_to_string("aegis.toml").map_err(|_| "aegis.toml not found")?;
     let manifest: Manifest = toml::from_str(&content).map_err(|e| format!("TOML Error: {}", e))?;
 
     let token = get_token()?;
+
+    let is_native_build = target_os.is_some() || target_arch.is_some();
+
+    let mut generated_binary = None;
+    if is_native_build {
+        let bin_name = build_native_package(&manifest.project.name)?;
+        generated_binary = Some(bin_name);
+        
+        if target_os.is_none() { target_os = Some(std::env::consts::OS.to_string()); }
+        if target_arch.is_none() { target_arch = Some(std::env::consts::ARCH.to_string()); }
+    }
     
-    // Determine platform metadata
     let os_val = target_os.unwrap_or("any".to_string());
     let arch_val = target_arch.unwrap_or("any".to_string());
 
@@ -208,14 +318,12 @@ pub fn publish(target_os: Option<String>, target_arch: Option<String>) -> Result
         arch_val
     );
 
-    // 2. Zip directory
     let zip_path = Path::new("package.zip");
-    create_zip_of_directory(Path::new("."), zip_path)?;
+    let user_excludes = manifest.project.exclude.unwrap_or_default();
+    create_zip_of_directory(Path::new("."), zip_path, &user_excludes)?;
 
-    // 3. Send via Multipart
     let url = format!("{}/packages/{}/publish/", REGISTRY_URL, manifest.project.name);
 
-    // We add the new fields 'os' and 'architecture' to the form
     let form = multipart::Form::new()
         .text("version", manifest.project.version)
         .text("os", os_val)
@@ -230,6 +338,10 @@ pub fn publish(target_os: Option<String>, target_arch: Option<String>) -> Result
         .map_err(|e| e.to_string())?;
 
     let _ = fs::remove_file(zip_path);
+
+    if let Some(bin_name) = generated_binary {
+        let _ = fs::remove_file(bin_name);
+    }
 
     if res.status().is_success() {
         println!("✅ Published successfully!");

@@ -937,7 +937,11 @@ impl Parser {
                 self.advance();
                 let mut els = Vec::new();
                 if !self.check(&TokenKind::RBracket) {
-                    loop { els.push(self.parse_expression()?); if !self.match_token(TokenKind::Comma) { break; } }
+                    loop { 
+                        els.push(self.parse_expression()?); 
+                        if !self.match_token(TokenKind::Comma) { break; } 
+                        if self.check(&TokenKind::RBracket) { break; }
+                    }
                 }
                 self.consume(TokenKind::RBracket, "]")?;
                 let mut ast = vec![json!("make_list")];
@@ -958,6 +962,7 @@ impl Parser {
                         let val = self.parse_expression()?;
                         entries.push(json!([key, val]));
                         if !self.match_token(TokenKind::Comma) { break; }
+                        if self.check(&TokenKind::RBrace) { break; }
                     }
                 }
                 self.consume(TokenKind::RBrace, "}")?;
@@ -1005,14 +1010,20 @@ impl Parser {
                 // On génère le format JSON attendu par le Loader
                 json!(["super_call", method_name, args])
             },
-            _ => return Err(format!("Unexpected token: {:?}", self.peek()))
+            _ => return Err(format!("Unexpected token: {:?} at line {}", self.peek(), self.current_line()))
         };
 
         loop {
             if self.match_token(TokenKind::LParen) {
                 let mut args = Vec::new();
                 if !self.check(&TokenKind::RParen) {
-                    loop { args.push(self.parse_expression()?); if !self.match_token(TokenKind::Comma) { break; } }
+                    loop { 
+                        args.push(self.parse_expression()?); 
+                        if !self.match_token(TokenKind::Comma) { break; }
+                        if self.check(&TokenKind::RParen) {
+                            break;
+                        }
+                    }
                 }
                 self.consume(TokenKind::RParen, ")")?;
                 expr = json!(["call", expr, args]);
