@@ -18,6 +18,7 @@ print first + " " + second // "Hello World"
 | `.len()` | Returns the length of the string. | `"Hi".len()` (2) |
 | `.at(index)` | Returns the character at the specified index (or `null`). | `"Abc".at(1)` ("b") |
 | `.index_of(sub)` | Returns the index of the first occurrence (or -1). | `"Hello".index_of("e")` (1) |
+| `.slice(start, end)` | Returns a substring from start to end (exclusive). | `"Hello".slice(1, 4)` ("ell") |
 | `.trim()` | Removes whitespace from both ends. | `" a ".trim()` ("a") |
 | `.upper()` | Converts the entire string to uppercase. | `"aegis".upper()` ("AEGIS") |
 | `.lower()` | Converts the entire string to lowercase. | `"AEGIS".lower()` ("aegis") |

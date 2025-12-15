@@ -1645,6 +1645,27 @@ impl VM {
                         None => Value::Integer(-1), // Retourne -1 si non trouvé
                     }
                 }
+
+                "slice" => {
+                    // Usage: string.slice(start, end)
+                    let len = s.chars().count();
+                    let start = args.get(0).and_then(|v| v.as_int().ok()).unwrap_or(0) as usize;
+                    // Par défaut jusqu'à la fin
+                    let end = args.get(1).and_then(|v| v.as_int().ok()).unwrap_or(len as i64) as usize;
+
+                    // Clamping
+                    let start = start.min(len);
+                    let end = end.min(len).max(start);
+
+                    // Attention : le slicing en Rust se fait sur les octets, mais ici on veut logique "caractères"
+                    // Pour supporter l'UTF-8 correctement, on itère sur chars()
+                    let sub: String = s.chars()
+                        .skip(start)
+                        .take(end - start)
+                        .collect();
+                    
+                    Value::String(sub)
+                },
                 
                 // --- Transformation ---
                 "trim" => {
