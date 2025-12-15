@@ -1635,6 +1635,16 @@ impl VM {
                         }
                     }
                 },
+                "index_of" => {
+                    // Récupère la sous-chaîne à chercher
+                    let sub = args[0].as_str().unwrap_or_default();
+                    
+                    // s.find retourne un Option<usize> (l'index en octets)
+                    match s.find(&sub) {
+                        Some(idx) => Value::Integer(idx as i64),
+                        None => Value::Integer(-1), // Retourne -1 si non trouvé
+                    }
+                }
                 
                 // --- Transformation ---
                 "trim" => {
