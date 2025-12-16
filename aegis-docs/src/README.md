@@ -42,7 +42,7 @@ import "stdlib/http.aeg"
 import "stdlib/json.aeg"
 
 // A Class representing a User
-class User(name, id) {
+class User {
     public name: string
     public id: int
 
@@ -52,7 +52,6 @@ class User(name, id) {
     }
 
     public info() {
-        return "User: " + this.name + " (ID: " + this.id + ")"
         return "User ${this.name} (ID: ${this.id})"
     }
 }
