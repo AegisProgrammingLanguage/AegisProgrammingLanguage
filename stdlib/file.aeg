@@ -4,6 +4,10 @@ namespace File {
         return io_read(path)
     }
 
+    func read_bytes(path) {
+        return io_read_bytes(path)
+    }
+
     // Écrit du contenu (écrase le fichier existant)
     func write(path, content) {
         // On s'assure que le contenu est une string
