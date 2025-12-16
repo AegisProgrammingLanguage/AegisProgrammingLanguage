@@ -21,6 +21,10 @@ namespace Socket {
         return sock_read(client_id, size)
     }
 
+    func read_bytes(client_id, size) {
+        return sock_read_bytes(client_id, size)
+    }
+
     // Écrit une chaine
     func write(client_id, data) {
         return sock_write(client_id, data)
