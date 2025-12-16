@@ -19,6 +19,7 @@ var config = {
 | Method | Description | Example |
 |--- |--- |--- |
 | `.get(key)` | Returns the value associated with the key. | `dict.get("host")` |
+| `.contains(key)` | Returns `true` if the key exists in the dictionary. | `dict.contains("Content-Type")` |
 | `.insert(key, val)` | Adds or updates a key-value pair. | `dict.insert("ssl", true)` |
 | `.keys()` | Returns a List of all keys in the dictionary. | `dict.keys()` |
 | `.len()` | Returns the number of entries. | `dict.len()` |

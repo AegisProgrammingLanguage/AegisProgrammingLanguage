@@ -1583,6 +1583,19 @@ impl VM {
                     let vals: Vec<Value> = d.borrow().values().cloned().collect();
                     Value::List(Rc::new(RefCell::new(vals)))
                 },
+
+                "contains" => {
+                    if args.is_empty() { 
+                        return Err("Usage: dict.contains(key)".into()); 
+                    }
+                    
+                    // On s'attend à ce que la clé soit une String (car HashMap<String, Value>)
+                    let key = args[0].as_str().map_err(|_| "Dict key must be a string")?;
+                    
+                    let exists = d.borrow().contains_key(&key);
+                    Value::Boolean(exists)
+                }
+
                 _ => return Err(format!("Unknown dict method '{}'", method_name).into())
             },
 
