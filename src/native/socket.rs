@@ -164,6 +164,7 @@ fn sock_write(args: Vec<Value>) -> Result<Value, String> {
     };
 
     res.map_err(|e| e.to_string())?;
+    stream.flush().map_err(|e| e.to_string())?;
     
     Ok(Value::Null)
 }
