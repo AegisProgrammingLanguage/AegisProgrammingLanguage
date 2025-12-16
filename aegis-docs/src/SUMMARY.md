@@ -35,6 +35,7 @@
     - [Properties](oop/properties.md)
     - [Methods & `this`](oop/methods.md)
     - [Inheritance](oop/inheritance.md)
+    - [Reflection & Introspection](oop/reflection.md)
     - [Composition Pattern](oop/composition.md)
 
 - [Modularity & System](modularity/README.md)
@@ -58,4 +59,5 @@
 - [Cookbook (Snippets)](cookbook/README.md)
     - [File Processing](cookbook/files.md)
     - [Networking](cookbook/network.md)
+    - [Database & ORM](cookbook/orm.md)
     - [System](cookbook/system.md)

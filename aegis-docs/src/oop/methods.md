@@ -38,3 +38,39 @@ var rect = new Rectangle(10, 20)
 
 print "Area: " + rect.area() // 200
 ```
+
+## Static Method Fallback
+
+Aegis allows calling **Static Methods** from an **Instance**. 
+
+If you try to call a method on an object (e.g., `user.table()`), and that method does not exist on the instance, the VM will look for a **static method** with the same name on the class.
+
+When this happens, `this` inside the static method will refer to the **Class** itself, not the instance.
+
+### Why is this useful?
+
+This enables clean patterns where an instance needs to access configuration defined at the class level (like a table name in an ORM).
+
+```aegis
+class Model {
+    public static table() {
+        return "generic_table"
+    }
+
+    public save() {
+        // 'this' is the instance here.
+        // It calls .table(), which is not on the instance.
+        // The VM finds static table() on the class and executes it.
+        print "Saving to " + this.table() 
+    }
+}
+
+class User extends Model {
+    public static table() {
+        return "users"
+    }
+}
+
+var u = new User()
+u.save() // Prints: "Saving to users"
+```

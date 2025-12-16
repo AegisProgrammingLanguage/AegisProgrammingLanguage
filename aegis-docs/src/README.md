@@ -43,8 +43,17 @@ import "stdlib/json.aeg"
 
 // A Class representing a User
 class User(name, id) {
-    info() {
+    public name: string
+    public id: int
+
+    init (name: string, id: int) {
+        this.name = name
+        this.id = id
+    }
+
+    public info() {
         return "User: " + this.name + " (ID: " + this.id + ")"
+        return "User ${this.name} (ID: ${this.id})"
     }
 }
 
