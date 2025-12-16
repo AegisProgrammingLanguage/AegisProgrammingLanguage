@@ -1231,8 +1231,64 @@ impl VM {
 
         // 1. Instance Methods (POO)
         if let Value::Instance(inst) = &obj {
+            // --- 1. REFLECTION (MÉTHODES NATIVES) ---
+            // On vérifie si c'est une méthode d'introspection avant de chercher dans les classes
+            let handled = match method_name.as_str() {
+                
+                "get_properties" => {
+                    // Retourne la liste des clés du dictionnaire interne 'fields'
+                    let fields = &inst.borrow().fields;
+                    let keys: Vec<Value> = fields.keys()
+                        .map(|k| Value::String(k.clone()))
+                        .collect();
+                    
+                    // Résultat sur la stack à la place de l'objet
+                    self.stack[obj_idx] = Value::List(Rc::new(RefCell::new(keys)));
+                    // Nettoyage des arguments (bien qu'il n'y en ait pas ici)
+                    self.stack.truncate(obj_idx + 1);
+                    true
+                },
+
+                "get_property" => {
+                    if arg_count != 1 { return Err("Usage: get_property(name)".into()); }
+                    
+                    // L'argument 'name' est juste après l'objet sur la stack
+                    let prop_name = self.stack[obj_idx + 1].as_str().map_err(|_| "Property name must be a string")?;
+                    
+                    let val = if let Some(v) = inst.borrow().fields.get(&prop_name) {
+                        v.clone()
+                    } else {
+                        Value::Null
+                    };
+
+                    self.stack[obj_idx] = val;
+                    self.stack.truncate(obj_idx + 1); // On retire l'argument
+                    true
+                },
+
+                "set_property" => {
+                    if arg_count != 2 { return Err("Usage: set_property(name, val)".into()); }
+                    
+                    let prop_name = self.stack[obj_idx + 1].as_str().map_err(|_| "Property name must be a string")?;
+                    let val = self.stack[obj_idx + 2].clone();
+
+                    // On insère directement dans le stockage interne
+                    inst.borrow_mut().fields.insert(prop_name, val);
+
+                    self.stack[obj_idx] = Value::Null;
+                    self.stack.truncate(obj_idx + 1); // On retire les 2 arguments
+                    true
+                },
+
+                _ => false // Ce n'est pas une méthode magique, on continue vers l'héritage
+            };
+
+            if handled {
+                return Ok(());
+            }
+
+            // --- 2. RÉSOLUTION CLASSIQUE (HÉRITAGE) ---
             // inst.borrow().class est maintenant directement Rc<ClassData>
-            // Plus besoin de déballer un Value::Class !
             let mut current_class_rc = inst.borrow().class.clone();
             
             loop {
@@ -1257,6 +1313,42 @@ impl VM {
                 
                 break; // Non trouvé
             }
+
+            // --- 3. FALLBACK STATIQUE ---
+            // Si on arrive ici, c'est que l'instance n'a pas la méthode.
+            // On regarde si la CLASSE a une méthode statique de ce nom.
+
+            let mut current_static_lookup = inst.borrow().class.clone();
+    
+            loop {
+                if let Some(method_val) = current_static_lookup.static_methods.get(&method_name) {
+                    // A. Vérification de sécurité
+                    self.check_access(&current_static_lookup, &method_name)?;
+
+                    // B. Préparation de la Stack
+                    self.stack[obj_idx] = method_val.clone(); // On remplace l'objet par la fonction
+
+                    // C. LE TRUC MAGIQUE : SWAP DE CONTEXTE
+                    // On injecte la CLASSE à la place de l'INSTANCE comme argument 0 ('this')
+                    // Cela permet à la méthode statique de fonctionner normalement
+                    self.stack.insert(obj_idx + 1, Value::Class(current_static_lookup.clone()));
+
+                    // D. Appel
+                    self.call_value(
+                        method_val.clone(),
+                        arg_count + 1,
+                        Some(current_static_lookup.clone())
+                    )?;
+                    return Ok(());
+                }
+
+                // Héritage des méthodes statiques (si Model a une méthode statique helper par exemple)
+                if let Some(parent) = &current_static_lookup.parent_ref {
+                    current_static_lookup = parent.clone();
+                    continue;
+                }
+                break;
+            }
         }
 
         if let Value::Class(class_rc) = &obj {
@@ -1264,6 +1356,25 @@ impl VM {
             // Note: Inheritance of static methods is possible in some languages.
             // For now, let's look in the class itself (simplification).
             // To support static inheritance: Loop on parent_ref like in Instance.
+
+            // --- REFLECTION STATIQUE ---
+            let handled = match method_name.as_str() {
+                "get_static_properties" => {
+                    // Retourne les propriétés statiques
+                    let keys: Vec<Value> = class_rc.static_properties.keys()
+                        .map(|k| Value::String(k.clone()))
+                        .collect();
+                    self.stack[obj_idx] = Value::List(Rc::new(RefCell::new(keys)));
+                    self.stack.truncate(obj_idx + 1);
+                    true
+                },
+                // Tu pourrais ajouter get_methods, get_parent, etc. ici
+                _ => false
+            };
+            
+            if handled { 
+                return Ok(());
+            }
             
             let mut current_lookup = class_rc.clone();
             loop {
